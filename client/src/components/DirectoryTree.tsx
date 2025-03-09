@@ -39,7 +39,7 @@ export function DirectoryTree({ data, onSelect }: DirectoryTreeProps) {
           style={{ paddingLeft: `${level * 20}px` }}
           onClick={() => handleSelect(node)}
         >
-          {hasChildren ? (
+          {hasChildren && (
             <Button
               variant="ghost"
               size="sm"
@@ -55,9 +55,8 @@ export function DirectoryTree({ data, onSelect }: DirectoryTreeProps) {
                 <ChevronRight className="h-4 w-4" />
               )}
             </Button>
-          ) : (
-            <span className="w-6" />
           )}
+          {!hasChildren && <span className="w-6" />}
 
           {node.type === 'directory' ? (
             <Folder className="h-4 w-4 text-blue-500" />
