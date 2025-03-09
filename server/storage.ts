@@ -3,6 +3,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs/promises';
+import type { Multer } from 'multer';
 
 export interface IStorage {
   addFileOperation(operation: InsertFileOperation): Promise<FileOperation>;
@@ -12,6 +13,8 @@ export interface IStorage {
   scanDirectory(dirPath: string): Promise<DirectoryEntry>;
   analyzeContent(filePath: string): Promise<ContentAnalysis>;
   getContentAnalysis(filePath: string): Promise<ContentAnalysis | null>;
+  uploadFile(file: { buffer: Buffer; originalname: string }, directory: string): Promise<FileOperation>;
+  createDirectory(dirPath: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -36,7 +39,8 @@ export class MemStorage implements IStorage {
     const fileOp: FileOperation = {
       ...operation,
       id,
-      timestamp: new Date()
+      timestamp: new Date(),
+      targetPath: operation.targetPath || null
     };
     this.fileOps.set(id, fileOp);
     return fileOp;
@@ -117,6 +121,55 @@ export class MemStorage implements IStorage {
       (a) => a.filePath === filePath
     );
     return analysis || null;
+  }
+
+  async uploadFile(file: { buffer: Buffer; originalname: string }, directory: string): Promise<FileOperation> {
+    try {
+      // Ensure we use a safe directory path
+      const baseUploadDir = path.join(process.cwd(), 'uploads');
+      const uploadDir = path.join(baseUploadDir, directory);
+
+      // Create base upload directory first
+      await this.createDirectory(baseUploadDir);
+      // Then create subdirectory if needed
+      await this.createDirectory(uploadDir);
+
+      // Create a safe filename
+      const fileName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const filePath = path.join(uploadDir, fileName);
+
+      // Write file and create operation record
+      await fs.writeFile(filePath, file.buffer);
+
+      // Log successful upload
+      await this.addLog({
+        level: 'info',
+        message: `File uploaded successfully: ${fileName}`
+      });
+
+      const operation: InsertFileOperation = {
+        sourcePath: file.originalname,
+        targetPath: filePath,
+        operationType: 'upload',
+        status: 'completed'
+      };
+      return this.addFileOperation(operation);
+    } catch (error) {
+      // Log error
+      await this.addLog({
+        level: 'error',
+        message: `Failed to upload file: ${error}`
+      });
+      throw new Error(`Failed to upload file: ${error}`);
+    }
+  }
+
+  async createDirectory(dirPath: string): Promise<void> {
+    try {
+      await fs.mkdir(dirPath, { recursive: true });
+    } catch (error) {
+      throw new Error(`Failed to create directory: ${error}`);
+    }
   }
 }
 

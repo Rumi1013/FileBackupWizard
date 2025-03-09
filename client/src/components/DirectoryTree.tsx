@@ -30,6 +30,7 @@ export function DirectoryTree({ data, onSelect }: DirectoryTreeProps) {
   const renderNode = (node: DirectoryEntry, level: number = 0) => {
     const isExpanded = expanded.has(node.path);
     const hasChildren = node.children && node.children.length > 0;
+    const children = node.children || [];
 
     return (
       <Fragment key={node.path}>
@@ -72,9 +73,9 @@ export function DirectoryTree({ data, onSelect }: DirectoryTreeProps) {
           )}
         </div>
 
-        {isExpanded && node.children && (
+        {isExpanded && children.length > 0 && (
           <div>
-            {node.children.map(child => renderNode(child, level + 1))}
+            {children.map(child => renderNode(child, level + 1))}
           </div>
         )}
       </Fragment>

@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertFileOperationSchema, insertLogSchema } from "@shared/schema";
+import multer from 'multer';
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/files/scan', async (req, res) => {
@@ -13,6 +16,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await storage.scanDirectory(dirPath);
       res.json(result);
     } catch (error) {
+      console.error('Scan error:', error);
       res.status(500).json({ error: `Failed to scan directory: ${error}` });
     }
   });
@@ -22,6 +26,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const operations = await storage.getFileOperations();
       res.json(operations);
     } catch (error) {
+      console.error('Operations error:', error);
       res.status(500).json({ error: `Failed to get operations: ${error}` });
     }
   });
@@ -32,6 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await storage.addFileOperation(operation);
       res.json(result);
     } catch (error) {
+      console.error('Add operation error:', error);
       res.status(500).json({ error: `Failed to add operation: ${error}` });
     }
   });
@@ -41,6 +47,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const logs = await storage.getLogs();
       res.json(logs);
     } catch (error) {
+      console.error('Logs error:', error);
       res.status(500).json({ error: `Failed to get logs: ${error}` });
     }
   });
@@ -51,6 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await storage.addLog(log);
       res.json(result);
     } catch (error) {
+      console.error('Add log error:', error);
       res.status(500).json({ error: `Failed to add log: ${error}` });
     }
   });
@@ -64,6 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await storage.analyzeContent(filePath);
       res.json(result);
     } catch (error) {
+      console.error('Analysis error:', error);
       res.status(500).json({ error: `Failed to analyze content: ${error}` });
     }
   });
@@ -77,7 +86,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(result);
     } catch (error) {
+      console.error('Get analysis error:', error);
       res.status(500).json({ error: `Failed to get analysis: ${error}` });
+    }
+  });
+
+  app.post('/api/upload', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+
+      const directory = req.body.directory || '';
+      console.log('Upload request:', { directory, filename: req.file.originalname });
+
+      const result = await storage.uploadFile(req.file, directory);
+      console.log('Upload success:', result);
+      res.json(result);
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ error: `Upload failed: ${error}` });
     }
   });
 

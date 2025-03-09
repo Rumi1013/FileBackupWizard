@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Folder, RefreshCw } from "lucide-react";
 import type { DirectoryEntry } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { FileUploader } from "./FileUploader";
 
 export function FileManager() {
   const [currentPath, setCurrentPath] = useState("/documents");
@@ -50,6 +51,10 @@ export function FileManager() {
     setSelectedFile(path);
   };
 
+  const handleUploadComplete = () => {
+    refetch();
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="space-y-4">
@@ -68,6 +73,11 @@ export function FileManager() {
             Scan
           </Button>
         </div>
+
+        <FileUploader 
+          currentDirectory={currentPath}
+          onUploadComplete={handleUploadComplete}
+        />
 
         {(isLoading || scanMutation.isPending) && (
           <Progress value={30} className="w-full" />
