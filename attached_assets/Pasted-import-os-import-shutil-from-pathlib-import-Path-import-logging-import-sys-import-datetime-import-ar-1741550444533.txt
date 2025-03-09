@@ -1,0 +1,115 @@
+import os
+import shutil
+from pathlib import Path
+import logging
+import sys
+import datetime
+import argparse
+
+# Set up logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('file_scanner.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+
+class SystemFileManager:
+    def __init__(self, base_dir):
+        self.base_dir = Path(base_dir).expanduser()
+        self.trash_dir = self.base_dir / "Managed_Content" / "Trash"
+        self.processed_dir = self.base_dir / "Managed_Content" / "Processed"
+        self.setup_directories()
+        
+        self.protected_dirs = {
+            '/System', '/Library', '/private', 
+            '/bin', '/sbin', '/usr', 
+            '/Applications', '/var'
+        }
+        
+        self.valid_extensions = {
+            '.txt', '.docx', '.pdf', 
+            '.png', '.jpg', '.jpeg'
+        }
+
+    def setup_directories(self):
+        dirs = [self.trash_dir, self.processed_dir]
+        for dir_path in dirs:
+            dir_path.mkdir(parents=True, exist_ok=True)
+            logging.info(f"Created directory: {dir_path}")
+
+    def is_safe_to_process(self, path):
+        path_str = str(path)
+        for protected in self.protected_dirs:
+            if path_str.startswith(protected):
+                return False
+        if path.name.startswith('.'):
+            return False
+        return True
+
+    def process_file(self, file_path):
+        file_path = Path(file_path)
+        if not self.is_safe_to_process(file_path):
+            logging.warning(f"Skipping protected file: {file_path}")
+            return
+            
+        try:
+            if file_path.stat().st_size < 1024:
+                self.move_to_trash(file_path)
+            else:
+                self.process_valid_file(file_path)
+        except Exception as e:
+            logging.error(f"Error processing {file_path}: {str(e)}")
+
+    def move_to_trash(self, file_path):
+        try:
+            dest = self.trash_dir / file_path.name
+            if dest.exists():
+                dest = self.trash_dir / f"{file_path.stem}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}{file_path.suffix}"
+            shutil.move(str(file_path), str(dest))
+            logging.info(f"Moved to trash: {file_path}")
+        except Exception as e:
+            logging.error(f"Error moving to trash: {str(e)}")
+
+    def process_valid_file(self, file_path):
+        try:
+            dest = self.processed_dir / file_path.name
+            if dest.exists():
+                dest = self.processed_dir / f"{file_path.stem}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}{file_path.suffix}"
+            shutil.move(str(file_path), str(dest))
+            logging.info(f"Processed: {file_path}")
+        except Exception as e:
+            logging.error(f"Error processing file: {str(e)}")
+
+    def scan_directory(self, start_path):
+        start_path = Path(start_path).expanduser()
+        if not start_path.exists():
+            logging.error(f"Directory not found: {start_path}")
+            return
+            
+        logging.info(f"Starting scan of: {start_path}")
+        try:
+            for item in start_path.rglob('*'):
+                if item.is_file() and self.is_safe_to_process(item):
+                    self.process_file(item)
+        except Exception as e:
+            logging.error(f"Scan error for {start_path}: {str(e)}")
+
+def main():
+    parser = argparse.ArgumentParser(description='Scan and organize files')
+    parser.add_argument('--dir', type=str, default='~/Documents',
+                      help='Directory to scan (default: ~/Documents)')
+    parser.add_argument('--base', type=str, default='~/FileManager',
+                      help='Base directory for managed content')
+    
+    args = parser.parse_args()
+    
+    manager = SystemFileManager(args.base)
+    manager.scan_directory(args.dir)
+    
+    logging.info("Scan complete! Check file_scanner.log for details")
+
+if __name__ == "__main__":
+    main()
