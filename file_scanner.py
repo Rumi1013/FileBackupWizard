@@ -7,43 +7,59 @@ def scan_directory(dir_path):
     try:
         dir_path = Path(dir_path).expanduser()
         if not dir_path.exists():
-            return {"error": "Directory not found"}
+            json.dump({"error": f"Directory not found: {dir_path}"}, sys.stdout)
+            return
 
         def create_entry(path):
-            is_file = path.is_file()
-            entry = {
-                "name": path.name,
-                "path": str(path),
-                "type": "file" if is_file else "directory"
-            }
-            
-            if is_file:
-                try:
-                    entry["size"] = path.stat().st_size
-                except:
-                    entry["size"] = 0
-            else:
-                try:
-                    children = []
-                    for child in path.iterdir():
-                        if not child.name.startswith('.'):  # Skip hidden files
-                            children.append(create_entry(child))
-                    entry["children"] = children
-                except PermissionError:
-                    entry["children"] = []
-                    
-            return entry
+            try:
+                is_file = path.is_file()
+                entry = {
+                    "name": path.name,
+                    "path": str(path),
+                    "type": "file" if is_file else "directory"
+                }
+
+                if is_file:
+                    try:
+                        entry["size"] = path.stat().st_size
+                    except:
+                        entry["size"] = 0
+                else:
+                    try:
+                        children = []
+                        for child in path.iterdir():
+                            if not child.name.startswith('.'):  # Skip hidden files
+                                child_entry = create_entry(child)
+                                if child_entry:  # Only add if entry was created successfully
+                                    children.append(child_entry)
+                        entry["children"] = children
+                    except PermissionError:
+                        entry["children"] = []
+
+                return entry
+            except Exception as e:
+                print(json.dumps({"error": f"Error processing {path}: {str(e)}"}), file=sys.stderr)
+                return None
 
         result = create_entry(dir_path)
-        print(json.dumps(result))
-        
+        if result:
+            json.dump(result, sys.stdout)
+        else:
+            json.dump({"error": "Failed to scan directory"}, sys.stdout)
+
     except Exception as e:
-        print(json.dumps({"error": str(e)}))
-        sys.exit(1)
+        json.dump({"error": str(e)}, sys.stdout)
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir', type=str, required=True)
     args = parser.parse_args()
+
+    # Ensure stdout is using UTF-8 encoding
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer)
+
     scan_directory(args.dir)
+    # Flush stdout to ensure all data is written
+    sys.stdout.flush()

@@ -93,8 +93,25 @@ export class MemStorage implements IStorage {
         message: `Scanning directory: ${normalizedPath}`
       });
 
-      const { stdout } = await execAsync(`python ${pythonScript} --dir "${normalizedPath}"`);
-      const result = JSON.parse(stdout);
+      const { stdout, stderr } = await execAsync(`python ${pythonScript} --dir "${normalizedPath}"`);
+
+      if (stderr) {
+        await this.addLog({
+          level: 'error',
+          message: `Scanner error: ${stderr}`
+        });
+      }
+
+      let result;
+      try {
+        result = JSON.parse(stdout);
+      } catch (e) {
+        await this.addLog({
+          level: 'error',
+          message: `Failed to parse scanner output: ${stdout}`
+        });
+        throw new Error('Invalid scanner output');
+      }
 
       if ('error' in result) {
         await this.addLog({
@@ -110,7 +127,7 @@ export class MemStorage implements IStorage {
         level: 'error',
         message: `Failed to scan directory: ${error}`
       });
-      throw new Error(`Failed to scan directory: ${error}`);
+      throw error;
     }
   }
 
