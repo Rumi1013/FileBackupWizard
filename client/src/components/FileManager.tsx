@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink } from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
-import { Folder, RefreshCw, ChevronRight, AlertCircle } from "lucide-react";
+import { Folder, RefreshCw, ChevronRight, AlertCircle, Home } from "lucide-react";
 import type { DirectoryEntry } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUploader } from "./FileUploader";
@@ -67,6 +67,10 @@ export function FileManager() {
     setCurrentPath(newPath);
   };
 
+  const goToRoot = () => {
+    setCurrentPath("/");
+  };
+
   const breadcrumbs = currentPath.split('/').filter(Boolean);
 
   return (
@@ -95,6 +99,14 @@ export function FileManager() {
           </div>
 
           <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={goToRoot}
+              className="min-w-[40px] px-3"
+              title="Go to Root Directory"
+            >
+              <Home className="h-4 w-4" />
+            </Button>
             <Input
               value={currentPath}
               onChange={(e) => setCurrentPath(e.target.value)}
