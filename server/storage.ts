@@ -1,4 +1,4 @@
-import { fileOperations, logs, contentAnalysis, type FileOperation, type InsertFileOperation, type Log, type InsertLog, type DirectoryEntry, type ContentAnalysis, type InsertContentAnalysis, type ContentSuggestion } from "@shared/schema";
+import { fileOperations, logs, contentAnalysis, type FileOperation, type InsertFileOperation, type Log, type InsertLog, type DirectoryEntry, type ContentAnalysis, type InsertContentAnalysis, type ContentSuggestion, type FileAssessment, type InsertFileAssessment, type DailyReport, type InsertDailyReport, type QualityMetrics, type FileOrganizationRules } from "@shared/schema";
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
@@ -11,11 +11,12 @@ export interface IStorage {
   addLog(log: InsertLog): Promise<Log>;
   getLogs(): Promise<Log[]>;
   scanDirectory(dirPath: string): Promise<DirectoryEntry>;
-  analyzeContent(filePath: string): Promise<ContentAnalysis>;
-  getContentAnalysis(filePath: string): Promise<ContentAnalysis | null>;
+  assessFile(filePath: string): Promise<FileAssessment>;
+  generateDailyReport(): Promise<DailyReport>;
   uploadFile(file: { buffer: Buffer; originalname: string }, directory: string): Promise<FileOperation>;
   createDirectory(dirPath: string): Promise<void>;
   isValidFileType(filename: string): boolean;
+  applyOrganizationRules(filePath: string): Promise<void>;
 }
 
 const VALID_FILE_TYPES = [
@@ -24,26 +25,203 @@ const VALID_FILE_TYPES = [
   '.csv', '.xlsx', '.xls'
 ];
 
+const FILE_ORGANIZATION_RULES: FileOrganizationRules = {
+  qualityThresholds: {
+    code: 0.7,
+    documents: 0.6,
+    images: 0.5,
+    videos: 0.6
+  },
+  monetizationCriteria: {
+    minQualityScore: 0.8,
+    requiredMetadata: ['title', 'description', 'keywords'],
+    contentTypes: ['.md', '.doc', '.docx', '.pdf', '.mp4', '.mov']
+  },
+  deletionRules: {
+    ageThreshold: 90, // days
+    sizeThreshold: 100 * 1024 * 1024, // 100MB
+    qualityThreshold: 0.3
+  }
+};
+
 export class MemStorage implements IStorage {
   private fileOps: Map<number, FileOperation>;
   private logEntries: Map<number, Log>;
   private analysisEntries: Map<number, ContentAnalysis>;
+  private fileAssessments: Map<number, FileAssessment>;
+  private dailyReports: Map<number, DailyReport>;
   private currentFileOpId: number;
   private currentLogId: number;
   private currentAnalysisId: number;
+  private currentAssessmentId: number;
+  private currentReportId: number;
 
   constructor() {
     this.fileOps = new Map();
     this.logEntries = new Map();
     this.analysisEntries = new Map();
+    this.fileAssessments = new Map();
+    this.dailyReports = new Map();
     this.currentFileOpId = 1;
     this.currentLogId = 1;
     this.currentAnalysisId = 1;
+    this.currentAssessmentId = 1;
+    this.currentReportId = 1;
   }
 
   isValidFileType(filename: string): boolean {
     const ext = path.extname(filename).toLowerCase();
     return VALID_FILE_TYPES.includes(ext);
+  }
+
+  private async assessFileQuality(filePath: string): Promise<QualityMetrics> {
+    const ext = path.extname(filePath).toLowerCase();
+    const content = await fs.readFile(filePath, 'utf-8');
+    const stats = await fs.stat(filePath);
+
+    let metrics: QualityMetrics = {};
+
+    // Code quality assessment
+    if (['.js', '.ts', '.py', '.jsx', '.tsx'].includes(ext)) {
+      metrics.codeQuality = {
+        lintingScore: 0.8, // Mock score
+        complexity: 0.7,
+        documentation: content.includes('/**') ? 0.9 : 0.4
+      };
+    }
+
+    // Document quality assessment
+    if (['.md', '.txt', '.doc', '.docx', '.pdf'].includes(ext)) {
+      metrics.documentQuality = {
+        readability: this.calculateReadabilityScore(content),
+        formatting: 0.8,
+        completeness: 0.7
+      };
+    }
+
+    return metrics;
+  }
+
+  async assessFile(filePath: string): Promise<FileAssessment> {
+    try {
+      const stats = await fs.stat(filePath);
+      const metrics = await this.assessFileQuality(filePath);
+
+      const assessment: InsertFileAssessment = {
+        filePath,
+        fileType: path.extname(filePath).toLowerCase(),
+        qualityScore: this.calculateOverallQuality(metrics),
+        monetizationEligible: this.checkMonetizationEligibility(filePath, metrics),
+        needsDeletion: this.checkDeletionNeeded(stats, metrics),
+        metadata: metrics,
+        lastModified: stats.mtime,
+        size: stats.size.toString()
+      };
+
+      const id = this.currentAssessmentId++;
+      const fullAssessment: FileAssessment = {
+        ...assessment,
+        id,
+        assessmentDate: new Date()
+      };
+
+      this.fileAssessments.set(id, fullAssessment);
+      return fullAssessment;
+    } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to assess file: ${error}`
+      });
+      throw error;
+    }
+  }
+
+  private calculateOverallQuality(metrics: QualityMetrics): string {
+    // Implement quality calculation logic based on metrics
+    return 'Good'; // Mock implementation
+  }
+
+  private checkMonetizationEligibility(filePath: string, metrics: QualityMetrics): boolean {
+    const ext = path.extname(filePath).toLowerCase();
+    return FILE_ORGANIZATION_RULES.monetizationCriteria.contentTypes.includes(ext);
+  }
+
+  private checkDeletionNeeded(stats: fs.Stats, metrics: QualityMetrics): boolean {
+    const ageInDays = (Date.now() - stats.mtime.getTime()) / (1000 * 60 * 60 * 24);
+    return ageInDays > FILE_ORGANIZATION_RULES.deletionRules.ageThreshold;
+  }
+
+  async generateDailyReport(): Promise<DailyReport> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todaysAssessments = Array.from(this.fileAssessments.values())
+      .filter(assessment => {
+        const assessmentDate = new Date(assessment.assessmentDate);
+        assessmentDate.setHours(0, 0, 0, 0);
+        return assessmentDate.getTime() === today.getTime();
+      });
+
+    const report: InsertDailyReport = {
+      date: today,
+      filesProcessed: todaysAssessments.map(a => ({
+        path: a.filePath,
+        type: a.fileType,
+        quality: a.qualityScore
+      })),
+      deletions: todaysAssessments
+        .filter(a => a.needsDeletion)
+        .map(a => ({
+          path: a.filePath,
+          reason: 'Age threshold exceeded'
+        })),
+      organizationChanges: todaysAssessments.map(a => ({
+        path: a.filePath,
+        action: a.needsDeletion ? 'marked_for_deletion' : 'assessed'
+      })),
+      recommendations: todaysAssessments
+        .filter(a => !a.needsDeletion && a.qualityScore === 'Poor')
+        .map(a => ({
+          path: a.filePath,
+          suggestion: 'Improve content quality'
+        }))
+    };
+
+    const id = this.currentReportId++;
+    const fullReport: DailyReport = {
+      ...report,
+      id
+    };
+
+    this.dailyReports.set(id, fullReport);
+    return fullReport;
+  }
+
+  async applyOrganizationRules(filePath: string): Promise<void> {
+    try {
+      const assessment = await this.assessFile(filePath);
+
+      if (assessment.needsDeletion) {
+        await this.addLog({
+          level: 'warning',
+          message: `File marked for deletion: ${filePath}`
+        });
+      }
+
+      // Add file operation record
+      await this.addFileOperation({
+        sourcePath: filePath,
+        operationType: 'assess',
+        status: 'completed'
+      });
+
+    } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to apply organization rules: ${error}`
+      });
+      throw error;
+    }
   }
 
   async addFileOperation(operation: InsertFileOperation): Promise<FileOperation> {

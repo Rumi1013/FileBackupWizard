@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertFileOperationSchema, insertLogSchema } from "@shared/schema";
+import { insertFileOperationSchema, insertLogSchema, insertFileAssessmentSchema } from "@shared/schema";
 import multer from 'multer';
 
 const upload = multer({ 
@@ -120,6 +120,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(413).json({ error: 'File size exceeds the 10MB limit' });
       }
       res.status(500).json({ error: `Upload failed: ${error}` });
+    }
+  });
+
+  app.post('/api/assess', async (req, res) => {
+    try {
+      const { filePath } = req.body;
+      if (!filePath) {
+        return res.status(400).json({ error: 'File path is required' });
+      }
+      const result = await storage.assessFile(filePath);
+      await storage.applyOrganizationRules(filePath);
+      res.json(result);
+    } catch (error) {
+      console.error('Assessment error:', error);
+      res.status(500).json({ error: `Failed to assess file: ${error}` });
+    }
+  });
+
+  app.get('/api/assessment/:filePath', async (req, res) => {
+    try {
+      const filePath = decodeURIComponent(req.params.filePath);
+      const result = await storage.assessFile(filePath);
+      res.json(result);
+    } catch (error) {
+      console.error('Get assessment error:', error);
+      res.status(500).json({ error: `Failed to get assessment: ${error}` });
+    }
+  });
+
+  app.get('/api/daily-report', async (req, res) => {
+    try {
+      const report = await storage.generateDailyReport();
+      res.json(report);
+    } catch (error) {
+      console.error('Report generation error:', error);
+      res.status(500).json({ error: `Failed to generate report: ${error}` });
     }
   });
 
