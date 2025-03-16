@@ -4,7 +4,12 @@ import { storage } from "./storage";
 import { insertFileOperationSchema, insertLogSchema } from "@shared/schema";
 import multer from 'multer';
 
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/files/scan', async (req, res) => {
@@ -100,11 +105,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const directory = req.body.directory || '';
       console.log('Upload request:', { directory, filename: req.file.originalname });
 
+      if (!storage.isValidFileType(req.file.originalname)) {
+        return res.status(400).json({ 
+          error: 'Invalid file type. Supported types: txt, md, doc, docx, pdf, jpg, jpeg, png, gif, csv, xlsx, xls' 
+        });
+      }
+
       const result = await storage.uploadFile(req.file, directory);
       console.log('Upload success:', result);
       res.json(result);
     } catch (error) {
       console.error('Upload error:', error);
+      if (error.message.includes('File too large')) {
+        return res.status(413).json({ error: 'File size exceeds the 10MB limit' });
+      }
       res.status(500).json({ error: `Upload failed: ${error}` });
     }
   });

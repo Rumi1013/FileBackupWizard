@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink } from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
-import { Folder, RefreshCw } from "lucide-react";
+import { Folder, RefreshCw, ChevronRight } from "lucide-react";
 import type { DirectoryEntry } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUploader } from "./FileUploader";
@@ -55,23 +56,52 @@ export function FileManager() {
     refetch();
   };
 
+  const handlePathChange = (newPath: string) => {
+    setCurrentPath(newPath);
+  };
+
+  const breadcrumbs = currentPath.split('/').filter(Boolean);
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="space-y-4">
-        <div className="flex gap-2">
-          <Input
-            value={currentPath}
-            onChange={(e) => setCurrentPath(e.target.value)}
-            placeholder="Enter directory path"
-            className="flex-1"
-          />
-          <Button 
-            onClick={() => scanMutation.mutate()}
-            disabled={scanMutation.isPending}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Scan
-          </Button>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <Breadcrumb>
+              <BreadcrumbItem>
+                <BreadcrumbLink onClick={() => handlePathChange("/")}>
+                  Root
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              {breadcrumbs.map((segment, index) => {
+                const path = '/' + breadcrumbs.slice(0, index + 1).join('/');
+                return (
+                  <BreadcrumbItem key={path}>
+                    <ChevronRight className="h-4 w-4" />
+                    <BreadcrumbLink onClick={() => handlePathChange(path)}>
+                      {segment}
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                );
+              })}
+            </Breadcrumb>
+          </div>
+
+          <div className="flex gap-2">
+            <Input
+              value={currentPath}
+              onChange={(e) => setCurrentPath(e.target.value)}
+              placeholder="Enter directory path"
+              className="flex-1"
+            />
+            <Button 
+              onClick={() => scanMutation.mutate()}
+              disabled={scanMutation.isPending}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${scanMutation.isPending ? 'animate-spin' : ''}`} />
+              Scan
+            </Button>
+          </div>
         </div>
 
         <FileUploader 
@@ -93,11 +123,20 @@ export function FileManager() {
           </TabsList>
 
           <TabsContent value="files">
-            {directoryData && (
+            {directoryData ? (
               <DirectoryTree 
                 data={directoryData} 
                 onSelect={handleFileSelect}
+                currentPath={currentPath}
               />
+            ) : isLoading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Loading directory contents...
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No directory data available
+              </div>
             )}
           </TabsContent>
 

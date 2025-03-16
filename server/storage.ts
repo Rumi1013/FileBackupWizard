@@ -15,7 +15,14 @@ export interface IStorage {
   getContentAnalysis(filePath: string): Promise<ContentAnalysis | null>;
   uploadFile(file: { buffer: Buffer; originalname: string }, directory: string): Promise<FileOperation>;
   createDirectory(dirPath: string): Promise<void>;
+  isValidFileType(filename: string): boolean;
 }
+
+const VALID_FILE_TYPES = [
+  '.txt', '.md', '.doc', '.docx', '.pdf',
+  '.jpg', '.jpeg', '.png', '.gif',
+  '.csv', '.xlsx', '.xls'
+];
 
 export class MemStorage implements IStorage {
   private fileOps: Map<number, FileOperation>;
@@ -34,6 +41,11 @@ export class MemStorage implements IStorage {
     this.currentAnalysisId = 1;
   }
 
+  isValidFileType(filename: string): boolean {
+    const ext = path.extname(filename).toLowerCase();
+    return VALID_FILE_TYPES.includes(ext);
+  }
+
   async addFileOperation(operation: InsertFileOperation): Promise<FileOperation> {
     const id = this.currentFileOpId++;
     const fileOp: FileOperation = {
@@ -43,6 +55,10 @@ export class MemStorage implements IStorage {
       targetPath: operation.targetPath || null
     };
     this.fileOps.set(id, fileOp);
+    await this.addLog({
+      level: 'info',
+      message: `File operation completed: ${operation.operationType} - ${operation.sourcePath}`
+    });
     return fileOp;
   }
 
@@ -62,17 +78,38 @@ export class MemStorage implements IStorage {
   }
 
   async getLogs(): Promise<Log[]> {
-    return Array.from(this.logEntries.values());
+    const logs = Array.from(this.logEntries.values());
+    return logs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
 
   async scanDirectory(dirPath: string): Promise<DirectoryEntry> {
-    const execAsync = promisify(exec);
-    const pythonScript = path.join(process.cwd(), 'file_scanner.py');
-
     try {
-      const { stdout } = await execAsync(`python ${pythonScript} --dir "${dirPath}"`);
-      return JSON.parse(stdout);
+      const execAsync = promisify(exec);
+      const pythonScript = path.join(process.cwd(), 'file_scanner.py');
+      const normalizedPath = path.normalize(dirPath);
+
+      await this.addLog({
+        level: 'info',
+        message: `Scanning directory: ${normalizedPath}`
+      });
+
+      const { stdout } = await execAsync(`python ${pythonScript} --dir "${normalizedPath}"`);
+      const result = JSON.parse(stdout);
+
+      if ('error' in result) {
+        await this.addLog({
+          level: 'error',
+          message: `Scan failed: ${result.error}`
+        });
+        throw new Error(result.error);
+      }
+
+      return result;
     } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to scan directory: ${error}`
+      });
       throw new Error(`Failed to scan directory: ${error}`);
     }
   }
@@ -80,31 +117,41 @@ export class MemStorage implements IStorage {
   async analyzeContent(filePath: string): Promise<ContentAnalysis> {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
+      const fileStats = await fs.stat(filePath);
+      const fileExt = path.extname(filePath).toLowerCase();
 
-      // Mock AI analysis - In real implementation, this would call an AI service
+      // Enhanced mock AI analysis with more relevant suggestions
       const suggestions: ContentSuggestion[] = [
         {
           category: 'readability',
           priority: 'high',
           suggestion: 'Consider breaking down long paragraphs',
-          reason: 'Improves focus for ADHD readers'
+          reason: 'Improves reading comprehension for ADHD readers'
         },
         {
           category: 'organization',
           priority: 'medium',
-          suggestion: 'Add clear section headers',
-          reason: 'Helps with content navigation'
+          suggestion: 'Add clear section headers and bullet points',
+          reason: 'Helps with content navigation and information retention'
+        },
+        {
+          category: 'readability',
+          priority: 'high',
+          suggestion: 'Use shorter sentences and simpler words',
+          reason: 'Reduces cognitive load for neurodivergent readers'
         }
       ];
 
       const analysis: ContentAnalysis = {
         id: this.currentAnalysisId++,
         filePath,
-        readabilityScore: 'Good',
+        readabilityScore: this.calculateReadabilityScore(content),
         suggestions: suggestions,
         organizationTips: [
           'Use bullet points for lists',
-          'Add visual breaks between sections'
+          'Add visual breaks between sections',
+          'Highlight key information',
+          'Include a summary at the beginning'
         ],
         timestamp: new Date()
       };
@@ -112,8 +159,22 @@ export class MemStorage implements IStorage {
       this.analysisEntries.set(analysis.id, analysis);
       return analysis;
     } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to analyze content: ${error}`
+      });
       throw new Error(`Failed to analyze content: ${error}`);
     }
+  }
+
+  private calculateReadabilityScore(content: string): string {
+    const words = content.split(/\s+/).length;
+    const sentences = content.split(/[.!?]+/).length;
+    const avgWordsPerSentence = words / sentences;
+
+    if (avgWordsPerSentence > 25) return 'Complex';
+    if (avgWordsPerSentence > 15) return 'Moderate';
+    return 'Easy';
   }
 
   async getContentAnalysis(filePath: string): Promise<ContentAnalysis | null> {
@@ -125,6 +186,10 @@ export class MemStorage implements IStorage {
 
   async uploadFile(file: { buffer: Buffer; originalname: string }, directory: string): Promise<FileOperation> {
     try {
+      if (!this.isValidFileType(file.originalname)) {
+        throw new Error('Invalid file type');
+      }
+
       // Ensure we use a safe directory path
       const baseUploadDir = path.join(process.cwd(), 'uploads');
       const uploadDir = path.join(baseUploadDir, directory);

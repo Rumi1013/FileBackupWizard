@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 interface DirectoryTreeProps {
   data: DirectoryEntry;
   onSelect?: (path: string) => void;
+  currentPath?: string; // Make currentPath optional since we don't use it internally
 }
 
 export function DirectoryTree({ data, onSelect }: DirectoryTreeProps) {
