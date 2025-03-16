@@ -9,19 +9,26 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink } from "@/components/ui/breadcrumb";
 import { useToast } from "@/hooks/use-toast";
-import { Folder, RefreshCw, ChevronRight } from "lucide-react";
+import { Folder, RefreshCw, ChevronRight, AlertCircle } from "lucide-react";
 import type { DirectoryEntry } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { FileUploader } from "./FileUploader";
 
 export function FileManager() {
-  const [currentPath, setCurrentPath] = useState("/documents");
+  const [currentPath, setCurrentPath] = useState("/");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const { data: directoryData, isLoading, refetch } = useQuery<DirectoryEntry>({
+  const { data: directoryData, isLoading, error, refetch } = useQuery<DirectoryEntry>({
     queryKey: ['/api/files/scan', currentPath],
-    queryFn: () => fetch(`/api/files/scan?path=${encodeURIComponent(currentPath)}`).then(res => res.json())
+    queryFn: async () => {
+      const response = await fetch(`/api/files/scan?path=${encodeURIComponent(currentPath)}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to scan directory');
+      }
+      return response.json();
+    }
   });
 
   const scanMutation = useMutation({
@@ -42,7 +49,7 @@ export function FileManager() {
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Failed to scan directory: ${error}`,
+        description: String(error),
         variant: "destructive",
       });
     },
@@ -113,6 +120,13 @@ export function FileManager() {
           <Progress value={30} className="w-full" />
         )}
 
+        {error && (
+          <div className="bg-destructive/10 text-destructive rounded-md p-4 flex items-center gap-2">
+            <AlertCircle className="h-5 w-5" />
+            <p className="text-sm">{String(error)}</p>
+          </div>
+        )}
+
         <Tabs defaultValue="files">
           <TabsList>
             <TabsTrigger value="files">
@@ -129,11 +143,7 @@ export function FileManager() {
                 onSelect={handleFileSelect}
                 currentPath={currentPath}
               />
-            ) : isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Loading directory contents...
-              </div>
-            ) : (
+            ) : !isLoading && !error && (
               <div className="text-center py-8 text-muted-foreground">
                 No directory data available
               </div>
