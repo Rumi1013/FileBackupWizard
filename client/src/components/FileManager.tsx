@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DirectoryTree } from "./DirectoryTree";
 import { LogViewer } from "./LogViewer";
-import { ContentAnalyzer } from "./ContentAnalyzer";
+import { FileAssessment } from "./FileAssessment";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -216,9 +216,9 @@ export function FileManager() {
           </Tabs>
         </div>
 
-        {/* Right Panel: Content Analysis */}
+        {/* Right Panel: File Assessment (replacing ContentAnalyzer) */}
         <div>
-          <ContentAnalyzer filePath={selectedFile} />
+          <FileAssessment filePath={selectedFile} />
         </div>
       </div>
     </div>
