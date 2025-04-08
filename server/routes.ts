@@ -159,6 +159,230 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // New route to explicitly apply organization rules to a file
+  app.post('/api/organize', async (req, res) => {
+    try {
+      const { filePath } = req.body;
+      if (!filePath) {
+        return res.status(400).json({ error: 'File path is required' });
+      }
+      
+      await storage.applyOrganizationRules(filePath);
+      
+      // Log the organization operation
+      await storage.addLog({
+        timestamp: new Date().toISOString(),
+        level: 'info',
+        message: `Applied organization rules to ${filePath}`,
+        source: 'file-organizer'
+      });
+      
+      res.json({ 
+        success: true, 
+        message: 'File organization rules applied successfully',
+        filePath
+      });
+    } catch (error) {
+      console.error('Organization error:', error);
+      
+      // Log the error
+      await storage.addLog({
+        timestamp: new Date().toISOString(),
+        level: 'error',
+        message: `Failed to apply organization rules: ${error}`,
+        source: 'file-organizer'
+      });
+      
+      res.status(500).json({ error: `Failed to apply organization rules: ${error}` });
+    }
+  });
+
+  // Batch apply organization rules to multiple files
+  app.post('/api/organize-batch', async (req, res) => {
+    try {
+      const { filePaths } = req.body;
+      if (!filePaths || !Array.isArray(filePaths) || filePaths.length === 0) {
+        return res.status(400).json({ error: 'No file paths provided or invalid format' });
+      }
+
+      const results = [];
+      const errors = [];
+
+      // Process each file
+      for (const filePath of filePaths) {
+        try {
+          await storage.applyOrganizationRules(filePath);
+          results.push({ filePath, success: true });
+        } catch (err: any) {
+          errors.push({ filePath, error: err.message });
+        }
+      }
+
+      // Log the batch operation
+      await storage.addLog({
+        timestamp: new Date().toISOString(),
+        level: 'info',
+        message: `Batch organization applied to ${results.length} files (${errors.length} failed)`,
+        source: 'file-organizer'
+      });
+
+      res.json({
+        success: true,
+        processed: results.length,
+        failed: errors.length,
+        results,
+        errors
+      });
+    } catch (error) {
+      console.error('Batch organization error:', error);
+      
+      await storage.addLog({
+        timestamp: new Date().toISOString(),
+        level: 'error',
+        message: `Batch organization failed: ${error}`,
+        source: 'file-organizer'
+      });
+      
+      res.status(500).json({ error: `Failed to apply batch organization: ${error}` });
+    }
+  });
+
+  // Get files by quality level
+  app.get('/api/files/quality/:qualityLevel', async (req, res) => {
+    try {
+      const qualityLevel = req.params.qualityLevel;
+      const fileType = req.query.type as string | undefined;
+      
+      if (!qualityLevel) {
+        return res.status(400).json({ error: 'Quality level is required' });
+      }
+      
+      // Scan root directory
+      const allFiles = await storage.scanDirectory('./');
+      
+      // Helper function to flatten directory structure
+      const flattenDirectoryStructure = (dir: any, files: any[] = []): any[] => {
+        if (dir.type === 'file') {
+          files.push(dir);
+        } else if (dir.children && Array.isArray(dir.children)) {
+          for (const child of dir.children) {
+            flattenDirectoryStructure(child, files);
+          }
+        }
+        return files;
+      };
+      
+      const fileList = flattenDirectoryStructure(allFiles);
+      
+      // Filter files by quality and file type
+      const filteredFiles = fileList.filter(file => {
+        // Skip files without assessment
+        if (!file.assessment) return false;
+        
+        // Filter by quality level
+        if (file.assessment.qualityScore !== qualityLevel) {
+          return false;
+        }
+        
+        // Filter by file type if specified
+        if (fileType && !file.assessment.fileType.toLowerCase().includes(fileType.toLowerCase())) {
+          return false;
+        }
+        
+        return true;
+      });
+      
+      // Add log
+      await storage.addLog({
+        timestamp: new Date().toISOString(),
+        level: 'info',
+        message: `Quality filter applied: ${qualityLevel}${fileType ? ', type: ' + fileType : ''} - Found ${filteredFiles.length} files`,
+        source: 'quality-filter'
+      });
+      
+      res.json({
+        success: true,
+        count: filteredFiles.length,
+        files: filteredFiles
+      });
+    } catch (error) {
+      console.error('Quality filter error:', error);
+      res.status(500).json({ error: `Failed to apply quality filter: ${error}` });
+    }
+  });
+
+  // Get files eligible for monetization
+  app.get('/api/files/monetization', async (req, res) => {
+    try {
+      // Scan root directory
+      const allFiles = await storage.scanDirectory('./');
+      
+      // Helper function to flatten directory structure
+      const flattenDirectoryStructure = (dir: any, files: any[] = []): any[] => {
+        if (dir.type === 'file') {
+          files.push(dir);
+        } else if (dir.children && Array.isArray(dir.children)) {
+          for (const child of dir.children) {
+            flattenDirectoryStructure(child, files);
+          }
+        }
+        return files;
+      };
+      
+      const fileList = flattenDirectoryStructure(allFiles);
+      
+      // Filter files eligible for monetization
+      const monetizableCandidates = fileList.filter(file => {
+        return file.assessment && file.assessment.monetizationEligible === true;
+      });
+      
+      res.json({
+        success: true,
+        count: monetizableCandidates.length,
+        files: monetizableCandidates
+      });
+    } catch (error) {
+      console.error('Monetization candidates error:', error);
+      res.status(500).json({ error: `Failed to find monetization candidates: ${error}` });
+    }
+  });
+
+  // Get files marked for deletion
+  app.get('/api/files/deletion', async (req, res) => {
+    try {
+      // Scan root directory
+      const allFiles = await storage.scanDirectory('./');
+      
+      // Helper function to flatten directory structure
+      const flattenDirectoryStructure = (dir: any, files: any[] = []): any[] => {
+        if (dir.type === 'file') {
+          files.push(dir);
+        } else if (dir.children && Array.isArray(dir.children)) {
+          for (const child of dir.children) {
+            flattenDirectoryStructure(child, files);
+          }
+        }
+        return files;
+      };
+      
+      const fileList = flattenDirectoryStructure(allFiles);
+      
+      // Filter files marked for deletion
+      const deletionCandidates = fileList.filter(file => {
+        return file.assessment && file.assessment.needsDeletion === true;
+      });
+      
+      res.json({
+        success: true,
+        count: deletionCandidates.length,
+        files: deletionCandidates
+      });
+    } catch (error) {
+      console.error('Deletion candidates error:', error);
+      res.status(500).json({ error: `Failed to find deletion candidates: ${error}` });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
