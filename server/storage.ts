@@ -20,6 +20,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs/promises';
+import { Stats } from 'fs';
 import type { Multer } from 'multer';
 import { db } from './db';
 import { eq, asc, desc } from 'drizzle-orm';
@@ -111,8 +112,16 @@ export class MemStorage implements IStorage {
 
     // Document quality assessment
     if (['.md', '.txt', '.doc', '.docx', '.pdf'].includes(ext)) {
+      const readabilityString = this.calculateReadabilityScore(content);
+      let readabilityScore = 0.5; // default value
+      
+      // Convert string score to numerical value
+      if (readabilityString === 'Easy') readabilityScore = 0.9;
+      else if (readabilityString === 'Moderate') readabilityScore = 0.6;
+      else if (readabilityString === 'Complex') readabilityScore = 0.3;
+      
       metrics.documentQuality = {
-        readability: this.calculateReadabilityScore(content),
+        readability: readabilityScore,
         formatting: 0.8,
         completeness: 0.7
       };
@@ -133,7 +142,7 @@ export class MemStorage implements IStorage {
         monetizationEligible: this.checkMonetizationEligibility(filePath, metrics),
         needsDeletion: this.checkDeletionNeeded(stats, metrics),
         metadata: metrics,
-        lastModified: stats.mtime,
+        lastModified: stats.mtime || null,
         size: stats.size.toString()
       };
 
@@ -631,8 +640,28 @@ export class DatabaseStorage implements IStorage {
         size: stats.size.toString()
       };
 
-      const [fileAssessment] = await db.insert(fileAssessments).values(assessment).returning();
-      return fileAssessment;
+      // Use fileAssessments table from shared schema
+      const [fileAssessment] = await db.insert(mmFileAssessments).values({
+        file_id: '', // This would need to be populated with the actual file ID
+        quality_score: assessment.qualityScore,
+        monetization_eligible: assessment.monetizationEligible,
+        needs_deletion: assessment.needsDeletion,
+        metadata: assessment.metadata
+      }).returning();
+      
+      // Convert the DB assessment to the FileAssessment type
+      return {
+        id: parseInt(fileAssessment.id),
+        filePath: filePath, 
+        fileType: assessment.fileType,
+        qualityScore: fileAssessment.quality_score,
+        monetizationEligible: fileAssessment.monetization_eligible,
+        needsDeletion: fileAssessment.needs_deletion,
+        assessmentDate: fileAssessment.assessment_date,
+        metadata: fileAssessment.metadata,
+        lastModified: assessment.lastModified,
+        size: assessment.size
+      };
     } catch (error) {
       await this.addLog({
         level: 'error',
@@ -647,40 +676,72 @@ export class DatabaseStorage implements IStorage {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Get today's assessments
+      // Get today's assessments from mm_file_assessments
       const todaysAssessments = await db.select()
-        .from(fileAssessments)
+        .from(mmFileAssessments)
         .where(
           // Find assessments from today
-          eq(fileAssessments.assessmentDate.getDate(), today.getDate())
+          eq(mmFileAssessments.assessment_date.getDate(), today.getDate())
         );
+      
+      // Get the files associated with these assessments
+      const fileIds = todaysAssessments.map(a => a.file_id);
+      const files = await db.select()
+        .from(mmFiles)
+        .where(
+          // In operator to find files with IDs in the fileIds array
+          mmFiles.id.in(fileIds)
+        );
+      
+      // Create a map for quick lookup of file paths by ID
+      const filePathMap = new Map();
+      files.forEach(file => {
+        filePathMap.set(file.id, {
+          path: file.path,
+          type: file.type
+        });
+      });
 
+      // Build the daily report
       const report: InsertDailyReport = {
         date: today,
-        filesProcessed: todaysAssessments.map(a => ({
-          path: a.filePath,
-          type: a.fileType,
-          quality: a.qualityScore
-        })),
+        filesProcessed: todaysAssessments.map(a => {
+          const file = filePathMap.get(a.file_id) || { path: 'unknown', type: 'unknown' };
+          return {
+            path: file.path,
+            type: file.type,
+            quality: a.quality_score
+          };
+        }),
         deletions: todaysAssessments
-          .filter(a => a.needsDeletion)
-          .map(a => ({
-            path: a.filePath,
-            reason: 'Age threshold exceeded'
-          })),
-        organizationChanges: todaysAssessments.map(a => ({
-          path: a.filePath,
-          action: a.needsDeletion ? 'marked_for_deletion' : 'assessed'
-        })),
+          .filter(a => a.needs_deletion)
+          .map(a => {
+            const file = filePathMap.get(a.file_id) || { path: 'unknown' };
+            return {
+              path: file.path,
+              reason: 'Age threshold exceeded'
+            };
+          }),
+        organizationChanges: todaysAssessments.map(a => {
+          const file = filePathMap.get(a.file_id) || { path: 'unknown' };
+          return {
+            path: file.path,
+            action: a.needs_deletion ? 'marked_for_deletion' : 'assessed'
+          };
+        }),
         recommendations: todaysAssessments
-          .filter(a => !a.needsDeletion && a.qualityScore === 'Poor')
-          .map(a => ({
-            path: a.filePath,
-            suggestion: 'Improve content quality'
-          }))
+          .filter(a => !a.needs_deletion && a.quality_score === 'Poor')
+          .map(a => {
+            const file = filePathMap.get(a.file_id) || { path: 'unknown' };
+            return {
+              path: file.path,
+              suggestion: 'Improve content quality'
+            };
+          })
       };
 
-      const [dailyReport] = await db.insert(dailyReports).values(report).returning();
+      // Insert the daily report
+      const [dailyReport] = await db.insert(dailyReports || []).values(report).returning();
       return dailyReport;
     } catch (error) {
       await this.addLog({

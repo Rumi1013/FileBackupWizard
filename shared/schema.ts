@@ -103,6 +103,33 @@ export const portfolioTags = pgTable("portfolio_tags", {
   tag: text("tag").notNull()
 });
 
+// File recommendation system tables
+export const fileRecommendations = pgTable("file_recommendations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fileId: uuid("file_id").notNull().references(() => mmFiles.id),
+  recommendationType: text("recommendation_type").notNull(),
+  recommendationText: text("recommendation_text").notNull(),
+  priority: text("priority").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  implemented: boolean("implemented").default(false).notNull(),
+  metadata: jsonb("metadata")
+});
+
+export const recommendationCategories = pgTable("recommendation_categories", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull()
+});
+
+export const recommendationFeedback = pgTable("recommendation_feedback", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  recommendationId: uuid("recommendation_id").notNull().references(() => fileRecommendations.id),
+  helpful: boolean("helpful").notNull(),
+  feedbackText: text("feedback_text"),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+});
+
 // Insert schemas
 export const insertFileAssessmentSchema = createInsertSchema(fileAssessments).omit({ 
   id: true,
@@ -155,6 +182,22 @@ export const insertPortfolioTagSchema = createInsertSchema(portfolioTags).omit({
   id: true
 });
 
+// Recommendation system insert schemas
+export const insertFileRecommendationSchema = createInsertSchema(fileRecommendations).omit({
+  id: true,
+  createdAt: true,
+  implemented: true
+});
+
+export const insertRecommendationCategorySchema = createInsertSchema(recommendationCategories).omit({
+  id: true
+});
+
+export const insertRecommendationFeedbackSchema = createInsertSchema(recommendationFeedback).omit({
+  id: true,
+  createdAt: true
+});
+
 // Types
 export type FileOperation = typeof fileOperations.$inferSelect;
 export type InsertFileOperation = z.infer<typeof insertFileOperationSchema>;
@@ -178,6 +221,14 @@ export type PortfolioMedia = typeof portfolioMedia.$inferSelect;
 export type InsertPortfolioMedia = z.infer<typeof insertPortfolioMediaSchema>;
 export type PortfolioTag = typeof portfolioTags.$inferSelect;
 export type InsertPortfolioTag = z.infer<typeof insertPortfolioTagSchema>;
+
+// Recommendation system types
+export type FileRecommendationType = typeof fileRecommendations.$inferSelect;
+export type InsertFileRecommendationType = z.infer<typeof insertFileRecommendationSchema>;
+export type RecommendationCategoryType = typeof recommendationCategories.$inferSelect;
+export type InsertRecommendationCategoryType = z.infer<typeof insertRecommendationCategorySchema>;
+export type RecommendationFeedbackType = typeof recommendationFeedback.$inferSelect;
+export type InsertRecommendationFeedbackType = z.infer<typeof insertRecommendationFeedbackSchema>;
 
 export interface DirectoryEntry {
   name: string;
@@ -244,4 +295,33 @@ export interface FileOrganizationRules {
     sizeThreshold: number;
     qualityThreshold: number;
   };
+}
+
+export interface FileRecommendation {
+  id: string;
+  file_id: string;
+  recommendation_type: 'quality_improvement' | 'monetization' | 'organization' | 'deletion';
+  recommendation_text: string;
+  priority: 'high' | 'medium' | 'low';
+  created_at: Date;
+  implemented: boolean;
+  metadata: Record<string, any>;
+}
+
+export interface RecommendationCategory {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export interface AIRecommendationResult {
+  recommendations: FileRecommendation[];
+  insights: {
+    file_count: number;
+    improvement_opportunities: number;
+    monetization_potential: 'high' | 'medium' | 'low';
+    organization_score: number;
+  };
+  summary: string;
 }
