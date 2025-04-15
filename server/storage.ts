@@ -1,9 +1,29 @@
-import { fileOperations, logs, contentAnalysis, type FileOperation, type InsertFileOperation, type Log, type InsertLog, type DirectoryEntry, type ContentAnalysis, type InsertContentAnalysis, type ContentSuggestion, type FileAssessment, type InsertFileAssessment, type DailyReport, type InsertDailyReport, type QualityMetrics, type FileOrganizationRules } from "@shared/schema";
+import { 
+  fileOperations, logs, contentAnalysis, 
+  mmFiles, mmFileAssessments, mmFileOperations, portfolioItems, portfolioMedia, portfolioTags,
+  type FileOperation, type InsertFileOperation, 
+  type Log, type InsertLog, 
+  type DirectoryEntry, 
+  type ContentAnalysis, type InsertContentAnalysis, 
+  type ContentSuggestion, 
+  type FileAssessment, type InsertFileAssessment, 
+  type DailyReport, type InsertDailyReport, 
+  type QualityMetrics, type FileOrganizationRules,
+  // Midnight Magnolia Integration Types
+  type MMFile, type InsertMMFile,
+  type MMFileAssessment, type InsertMMFileAssessment,
+  type MMFileOperation, type InsertMMFileOperation,
+  type PortfolioItem, type InsertPortfolioItem,
+  type PortfolioMedia, type InsertPortfolioMedia,
+  type PortfolioTag, type InsertPortfolioTag
+} from "@shared/schema";
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs/promises';
 import type { Multer } from 'multer';
+import { db } from './db';
+import { eq, asc, desc } from 'drizzle-orm';
 
 export interface IStorage {
   addFileOperation(operation: InsertFileOperation): Promise<FileOperation>;
@@ -434,3 +454,389 @@ export class MemStorage implements IStorage {
 }
 
 export const storage = new MemStorage();
+
+/**
+ * DatabaseStorage class for Midnight Magnolia integration
+ * Implements file management operations using PostgreSQL/Supabase
+ */
+export class DatabaseStorage implements IStorage {
+  // Helper methods for file quality assessment
+  private calculateOverallQuality(metrics: QualityMetrics): string {
+    // Implementation similar to MemStorage
+    return 'Good'; // Simple implementation for now
+  }
+
+  private checkMonetizationEligibility(filePath: string, metrics: QualityMetrics): boolean {
+    const ext = path.extname(filePath).toLowerCase();
+    return FILE_ORGANIZATION_RULES.monetizationCriteria.contentTypes.includes(ext);
+  }
+
+  private checkDeletionNeeded(stats: any, metrics: QualityMetrics): boolean {
+    const ageInDays = (Date.now() - stats.mtime.getTime()) / (1000 * 60 * 60 * 24);
+    return ageInDays > FILE_ORGANIZATION_RULES.deletionRules.ageThreshold;
+  }
+
+  private calculateReadabilityScore(content: string): number {
+    const words = content.split(/\s+/).length;
+    const sentences = content.split(/[.!?]+/).length;
+    const avgWordsPerSentence = words / sentences;
+
+    if (avgWordsPerSentence > 25) return 0.3; // Complex
+    if (avgWordsPerSentence > 15) return 0.6; // Moderate
+    return 0.9; // Easy
+  }
+  
+  private async assessFileQuality(filePath: string): Promise<QualityMetrics> {
+    const ext = path.extname(filePath).toLowerCase();
+    let content = "";
+    try {
+      content = await fs.readFile(filePath, 'utf-8');
+    } catch (error) {
+      console.error("Error reading file:", error);
+    }
+    
+    const stats = await fs.stat(filePath);
+    let metrics: QualityMetrics = {};
+
+    // Code quality assessment
+    if (['.js', '.ts', '.py', '.jsx', '.tsx'].includes(ext)) {
+      metrics.codeQuality = {
+        lintingScore: 0.8,
+        complexity: 0.7,
+        documentation: content.includes('/**') ? 0.9 : 0.4
+      };
+    }
+
+    // Document quality assessment
+    if (['.md', '.txt', '.doc', '.docx', '.pdf'].includes(ext)) {
+      const readability = this.calculateReadabilityScore(content);
+      metrics.documentQuality = {
+        readability,
+        formatting: 0.8,
+        completeness: 0.7
+      };
+    }
+
+    // Image quality assessment
+    if (['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
+      metrics.imageQuality = {
+        resolution: 1080, // Mock values
+        colorProfile: 'RGB',
+        compression: 0.7
+      };
+    }
+
+    return metrics;
+  }
+
+  isValidFileType(filename: string): boolean {
+    const ext = path.extname(filename).toLowerCase();
+    return VALID_FILE_TYPES.includes(ext);
+  }
+
+  // Core CRUD operations
+  async addFileOperation(operation: InsertFileOperation): Promise<FileOperation> {
+    try {
+      const [fileOp] = await db.insert(fileOperations).values(operation).returning();
+      await this.addLog({
+        level: 'info',
+        message: `File operation completed: ${operation.operationType} - ${operation.sourcePath}`
+      });
+      return fileOp;
+    } catch (error) {
+      console.error("Error adding file operation:", error);
+      throw error;
+    }
+  }
+
+  async getFileOperations(): Promise<FileOperation[]> {
+    return await db.select().from(fileOperations).orderBy(desc(fileOperations.timestamp));
+  }
+
+  async addLog(log: InsertLog): Promise<Log> {
+    try {
+      const [logEntry] = await db.insert(logs).values(log).returning();
+      return logEntry;
+    } catch (error) {
+      console.error("Error adding log:", error);
+      throw error;
+    }
+  }
+
+  async getLogs(): Promise<Log[]> {
+    return await db.select().from(logs).orderBy(desc(logs.timestamp));
+  }
+
+  async scanDirectory(dirPath: string): Promise<DirectoryEntry> {
+    try {
+      await this.addLog({
+        level: 'info',
+        message: `Scanning directory: ${dirPath}`
+      });
+
+      const execAsync = promisify(exec);
+      const pythonScript = path.join(process.cwd(), 'file_scanner.py');
+      const normalizedPath = path.normalize(dirPath);
+
+      const { stdout, stderr } = await execAsync(`python ${pythonScript} --dir "${normalizedPath}"`);
+
+      if (stderr) {
+        await this.addLog({
+          level: 'error',
+          message: `Scanner error: ${stderr}`
+        });
+      }
+
+      let result;
+      try {
+        result = JSON.parse(stdout);
+      } catch (e) {
+        await this.addLog({
+          level: 'error',
+          message: `Failed to parse scanner output: ${stdout}`
+        });
+        throw new Error('Invalid scanner output');
+      }
+
+      if ('error' in result) {
+        await this.addLog({
+          level: 'error',
+          message: `Scan failed: ${result.error}`
+        });
+        throw new Error(result.error);
+      }
+
+      return result;
+    } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to scan directory: ${error}`
+      });
+      throw error;
+    }
+  }
+
+  async assessFile(filePath: string): Promise<FileAssessment> {
+    try {
+      const stats = await fs.stat(filePath);
+      const metrics = await this.assessFileQuality(filePath);
+
+      const assessment: InsertFileAssessment = {
+        filePath,
+        fileType: path.extname(filePath).toLowerCase(),
+        qualityScore: this.calculateOverallQuality(metrics),
+        monetizationEligible: this.checkMonetizationEligibility(filePath, metrics),
+        needsDeletion: this.checkDeletionNeeded(stats, metrics),
+        metadata: metrics,
+        lastModified: stats.mtime || null,
+        size: stats.size.toString()
+      };
+
+      const [fileAssessment] = await db.insert(fileAssessments).values(assessment).returning();
+      return fileAssessment;
+    } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to assess file: ${error}`
+      });
+      throw error;
+    }
+  }
+
+  async generateDailyReport(): Promise<DailyReport> {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Get today's assessments
+      const todaysAssessments = await db.select()
+        .from(fileAssessments)
+        .where(
+          // Find assessments from today
+          eq(fileAssessments.assessmentDate.getDate(), today.getDate())
+        );
+
+      const report: InsertDailyReport = {
+        date: today,
+        filesProcessed: todaysAssessments.map(a => ({
+          path: a.filePath,
+          type: a.fileType,
+          quality: a.qualityScore
+        })),
+        deletions: todaysAssessments
+          .filter(a => a.needsDeletion)
+          .map(a => ({
+            path: a.filePath,
+            reason: 'Age threshold exceeded'
+          })),
+        organizationChanges: todaysAssessments.map(a => ({
+          path: a.filePath,
+          action: a.needsDeletion ? 'marked_for_deletion' : 'assessed'
+        })),
+        recommendations: todaysAssessments
+          .filter(a => !a.needsDeletion && a.qualityScore === 'Poor')
+          .map(a => ({
+            path: a.filePath,
+            suggestion: 'Improve content quality'
+          }))
+      };
+
+      const [dailyReport] = await db.insert(dailyReports).values(report).returning();
+      return dailyReport;
+    } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to generate daily report: ${error}`
+      });
+      throw error;
+    }
+  }
+
+  async uploadFile(file: { buffer: Buffer; originalname: string }, directory: string): Promise<FileOperation> {
+    try {
+      if (!this.isValidFileType(file.originalname)) {
+        throw new Error('Invalid file type');
+      }
+
+      // Ensure we use a safe directory path
+      const baseUploadDir = path.join(process.cwd(), 'uploads');
+      const uploadDir = path.join(baseUploadDir, directory);
+
+      // Create directories
+      await this.createDirectory(baseUploadDir);
+      await this.createDirectory(uploadDir);
+
+      // Create a safe filename
+      const fileName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const filePath = path.join(uploadDir, fileName);
+
+      // Write file
+      await fs.writeFile(filePath, file.buffer);
+
+      // Log successful upload
+      await this.addLog({
+        level: 'info',
+        message: `File uploaded successfully: ${fileName}`
+      });
+
+      // Insert into mm_files table
+      const fileData: InsertMMFile = {
+        name: fileName,
+        path: filePath,
+        type: path.extname(file.originalname).toLowerCase(),
+        size: file.buffer.length,
+        metadata: null
+      };
+
+      const [mmFile] = await db.insert(mmFiles).values(fileData).returning();
+
+      // Create file operation record
+      const operation: InsertFileOperation = {
+        sourcePath: file.originalname,
+        targetPath: filePath,
+        operationType: 'upload',
+        status: 'completed'
+      };
+
+      return this.addFileOperation(operation);
+    } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to upload file: ${error}`
+      });
+      throw error;
+    }
+  }
+
+  async createDirectory(dirPath: string): Promise<void> {
+    try {
+      await fs.mkdir(dirPath, { recursive: true });
+    } catch (error) {
+      throw new Error(`Failed to create directory: ${error}`);
+    }
+  }
+
+  async applyOrganizationRules(filePath: string): Promise<void> {
+    try {
+      const assessment = await this.assessFile(filePath);
+
+      if (assessment.needsDeletion) {
+        await this.addLog({
+          level: 'warning',
+          message: `File marked for deletion: ${filePath}`
+        });
+      }
+
+      // Add file operation record
+      await this.addFileOperation({
+        sourcePath: filePath,
+        operationType: 'assess',
+        status: 'completed'
+      });
+
+    } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to apply organization rules: ${error}`
+      });
+      throw error;
+    }
+  }
+
+  // Midnight Magnolia Integration Methods
+  
+  // File methods
+  async addMMFile(file: InsertMMFile): Promise<MMFile> {
+    const [mmFile] = await db.insert(mmFiles).values(file).returning();
+    return mmFile;
+  }
+
+  async getMMFiles(): Promise<MMFile[]> {
+    return await db.select().from(mmFiles);
+  }
+
+  async getMMFileById(id: string): Promise<MMFile | undefined> {
+    const [file] = await db.select().from(mmFiles).where(eq(mmFiles.id, id));
+    return file;
+  }
+
+  // File assessment methods
+  async addMMFileAssessment(assessment: InsertMMFileAssessment): Promise<MMFileAssessment> {
+    const [mmAssessment] = await db.insert(mmFileAssessments).values(assessment).returning();
+    return mmAssessment;
+  }
+
+  async getMMFileAssessments(): Promise<MMFileAssessment[]> {
+    return await db.select().from(mmFileAssessments);
+  }
+
+  // Portfolio methods
+  async addPortfolioItem(item: InsertPortfolioItem): Promise<PortfolioItem> {
+    const [portfolioItem] = await db.insert(portfolioItems).values(item).returning();
+    return portfolioItem;
+  }
+
+  async getPortfolioItems(): Promise<PortfolioItem[]> {
+    return await db.select().from(portfolioItems);
+  }
+  
+  async getPortfolioItemById(id: string): Promise<PortfolioItem | undefined> {
+    const [item] = await db.select().from(portfolioItems).where(eq(portfolioItems.id, id));
+    return item;
+  }
+  
+  async addPortfolioMedia(media: InsertPortfolioMedia): Promise<PortfolioMedia> {
+    const [portfolioMedia] = await db.insert(portfolioMedia).values(media).returning();
+    return portfolioMedia;
+  }
+  
+  async addPortfolioTag(tag: InsertPortfolioTag): Promise<PortfolioTag> {
+    const [portfolioTag] = await db.insert(portfolioTags).values(tag).returning();
+    return portfolioTag;
+  }
+}
+
+// Use MemStorage for development and DatabaseStorage for production
+// export const storage = process.env.NODE_ENV === 'production' 
+//   ? new DatabaseStorage() 
+//   : new MemStorage();

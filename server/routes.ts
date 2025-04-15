@@ -1,7 +1,18 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertFileOperationSchema, insertLogSchema, insertFileAssessmentSchema } from "@shared/schema";
+import { 
+  insertFileOperationSchema, 
+  insertLogSchema, 
+  insertFileAssessmentSchema,
+  insertMMFileSchema,
+  insertMMFileAssessmentSchema,
+  insertMMFileOperationSchema,
+  insertPortfolioItemSchema,
+  insertPortfolioMediaSchema,
+  insertPortfolioTagSchema
+} from "@shared/schema";
+import { DatabaseStorage } from "./storage";
 import multer from 'multer';
 
 const upload = multer({ 
@@ -380,6 +391,206 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Deletion candidates error:', error);
       res.status(500).json({ error: `Failed to find deletion candidates: ${error}` });
+    }
+  });
+
+  // =============================================
+  // MIDNIGHT MAGNOLIA INTEGRATION API ENDPOINTS
+  // =============================================
+  
+  // Create an instance of DatabaseStorage for the integration endpoints
+  const dbStorage = new DatabaseStorage();
+  
+  // MM File Manager API endpoints
+  
+  // Get all files
+  app.get('/api/mm/files', async (req, res) => {
+    try {
+      const files = await dbStorage.getMMFiles();
+      res.json(files);
+    } catch (error) {
+      console.error('MM Files error:', error);
+      res.status(500).json({ error: `Failed to get MM files: ${error}` });
+    }
+  });
+  
+  // Get file by ID
+  app.get('/api/mm/files/:id', async (req, res) => {
+    try {
+      const id = req.params.id;
+      const file = await dbStorage.getMMFileById(id);
+      
+      if (!file) {
+        return res.status(404).json({ error: 'File not found' });
+      }
+      
+      res.json(file);
+    } catch (error) {
+      console.error('MM File retrieval error:', error);
+      res.status(500).json({ error: `Failed to get MM file: ${error}` });
+    }
+  });
+  
+  // Upload file to MM 
+  app.post('/api/mm/files', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      const directory = req.body.directory || '';
+      
+      if (!dbStorage.isValidFileType(req.file.originalname)) {
+        return res.status(400).json({ 
+          error: 'Invalid file type. Supported types: txt, md, doc, docx, pdf, jpg, jpeg, png, gif, csv, xlsx, xls' 
+        });
+      }
+      
+      const result = await dbStorage.uploadFile(req.file, directory);
+      res.json(result);
+    } catch (error) {
+      console.error('MM Upload error:', error);
+      if (error.message && error.message.includes('File too large')) {
+        return res.status(413).json({ error: 'File size exceeds the 10MB limit' });
+      }
+      res.status(500).json({ error: `MM Upload failed: ${error}` });
+    }
+  });
+  
+  // File assessment endpoints
+  
+  // Get all file assessments
+  app.get('/api/mm/assessments', async (req, res) => {
+    try {
+      const assessments = await dbStorage.getMMFileAssessments();
+      res.json(assessments);
+    } catch (error) {
+      console.error('MM Assessments error:', error);
+      res.status(500).json({ error: `Failed to get MM assessments: ${error}` });
+    }
+  });
+  
+  // Assess a file
+  app.post('/api/mm/assess', async (req, res) => {
+    try {
+      const { filePath } = req.body;
+      if (!filePath) {
+        return res.status(400).json({ error: 'File path is required' });
+      }
+      
+      const assessment = await dbStorage.assessFile(filePath);
+      await dbStorage.applyOrganizationRules(filePath);
+      
+      res.json(assessment);
+    } catch (error) {
+      console.error('MM Assessment error:', error);
+      res.status(500).json({ error: `Failed to assess MM file: ${error}` });
+    }
+  });
+  
+  // Portfolio Integration API endpoints
+  
+  // Get all portfolio items
+  app.get('/api/portfolio/items', async (req, res) => {
+    try {
+      const items = await dbStorage.getPortfolioItems();
+      res.json(items);
+    } catch (error) {
+      console.error('Portfolio items error:', error);
+      res.status(500).json({ error: `Failed to get portfolio items: ${error}` });
+    }
+  });
+  
+  // Get portfolio item by ID
+  app.get('/api/portfolio/items/:id', async (req, res) => {
+    try {
+      const id = req.params.id;
+      const item = await dbStorage.getPortfolioItemById(id);
+      
+      if (!item) {
+        return res.status(404).json({ error: 'Portfolio item not found' });
+      }
+      
+      res.json(item);
+    } catch (error) {
+      console.error('Portfolio item retrieval error:', error);
+      res.status(500).json({ error: `Failed to get portfolio item: ${error}` });
+    }
+  });
+  
+  // Create portfolio item
+  app.post('/api/portfolio/items', async (req, res) => {
+    try {
+      const portfolioItem = insertPortfolioItemSchema.parse(req.body);
+      const result = await dbStorage.addPortfolioItem(portfolioItem);
+      res.status(201).json(result);
+    } catch (error) {
+      console.error('Create portfolio item error:', error);
+      res.status(500).json({ error: `Failed to create portfolio item: ${error}` });
+    }
+  });
+  
+  // Add media to portfolio item
+  app.post('/api/portfolio/:portfolioId/media', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      const portfolioId = req.params.portfolioId;
+      
+      // Ensure portfolio item exists
+      const portfolioItem = await dbStorage.getPortfolioItemById(portfolioId);
+      if (!portfolioItem) {
+        return res.status(404).json({ error: 'Portfolio item not found' });
+      }
+      
+      // Upload the file
+      const uploadedFile = await dbStorage.uploadFile(req.file, `portfolio/${portfolioId}`);
+      
+      // Create media record
+      const mediaData: any = {
+        portfolioItemId: portfolioId,
+        mediaType: req.body.mediaType || 'image',
+        url: uploadedFile.targetPath,
+        thumbnailUrl: req.body.thumbnailUrl || null,
+        orderIndex: parseInt(req.body.orderIndex || '0')
+      };
+      
+      const media = await dbStorage.addPortfolioMedia(mediaData);
+      res.status(201).json(media);
+    } catch (error) {
+      console.error('Add portfolio media error:', error);
+      res.status(500).json({ error: `Failed to add portfolio media: ${error}` });
+    }
+  });
+  
+  // Add tag to portfolio item
+  app.post('/api/portfolio/:portfolioId/tags', async (req, res) => {
+    try {
+      const portfolioId = req.params.portfolioId;
+      
+      // Ensure portfolio item exists
+      const portfolioItem = await dbStorage.getPortfolioItemById(portfolioId);
+      if (!portfolioItem) {
+        return res.status(404).json({ error: 'Portfolio item not found' });
+      }
+      
+      const { tag } = req.body;
+      if (!tag) {
+        return res.status(400).json({ error: 'Tag is required' });
+      }
+      
+      const tagData = {
+        portfolioItemId: portfolioId,
+        tag
+      };
+      
+      const result = await dbStorage.addPortfolioTag(tagData);
+      res.status(201).json(result);
+    } catch (error) {
+      console.error('Add portfolio tag error:', error);
+      res.status(500).json({ error: `Failed to add portfolio tag: ${error}` });
     }
   });
 
