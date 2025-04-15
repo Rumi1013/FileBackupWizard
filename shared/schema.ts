@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, jsonb, boolean, uuid, integer, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -40,6 +40,69 @@ export const logs = pgTable("logs", {
   timestamp: timestamp("timestamp").notNull().defaultNow()
 });
 
+// Midnight Magnolia integration tables
+
+// Files table for the integrated file manager
+export const mmFiles = pgTable("mm_files", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  path: text("path").notNull(),
+  type: text("type").notNull(),
+  size: integer("size").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  metadata: jsonb("metadata")
+});
+
+// File assessments integration table
+export const mmFileAssessments = pgTable("mm_file_assessments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fileId: uuid("file_id").notNull().references(() => mmFiles.id),
+  qualityScore: text("quality_score").notNull(),
+  monetizationEligible: boolean("monetization_eligible").notNull(),
+  needsDeletion: boolean("needs_deletion").notNull(),
+  assessmentDate: timestamp("assessment_date").notNull().defaultNow(),
+  metadata: jsonb("metadata")
+});
+
+// File operations integration table
+export const mmFileOperations = pgTable("mm_file_operations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fileId: uuid("file_id").notNull().references(() => mmFiles.id),
+  operationType: text("operation_type").notNull(),
+  operationDate: timestamp("operation_date").notNull().defaultNow(),
+  status: text("status").notNull(),
+  details: jsonb("details")
+});
+
+// Portfolio integration tables
+export const portfolioItems = pgTable("portfolio_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  visibility: text("visibility").notNull(),
+  metadata: jsonb("metadata")
+});
+
+export const portfolioMedia = pgTable("portfolio_media", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portfolioItemId: uuid("portfolio_item_id").notNull().references(() => portfolioItems.id),
+  mediaType: text("media_type").notNull(),
+  url: text("url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  orderIndex: integer("order_index").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow()
+});
+
+export const portfolioTags = pgTable("portfolio_tags", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  portfolioItemId: uuid("portfolio_item_id").notNull().references(() => portfolioItems.id),
+  tag: text("tag").notNull()
+});
+
 // Insert schemas
 export const insertFileAssessmentSchema = createInsertSchema(fileAssessments).omit({ 
   id: true,
@@ -60,6 +123,38 @@ export const insertLogSchema = createInsertSchema(logs).omit({
   timestamp: true
 });
 
+// Midnight Magnolia Integration Insert Schemas
+export const insertMMFileSchema = createInsertSchema(mmFiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertMMFileAssessmentSchema = createInsertSchema(mmFileAssessments).omit({
+  id: true,
+  assessmentDate: true
+});
+
+export const insertMMFileOperationSchema = createInsertSchema(mmFileOperations).omit({
+  id: true,
+  operationDate: true
+});
+
+export const insertPortfolioItemSchema = createInsertSchema(portfolioItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true
+});
+
+export const insertPortfolioMediaSchema = createInsertSchema(portfolioMedia).omit({
+  id: true,
+  createdAt: true
+});
+
+export const insertPortfolioTagSchema = createInsertSchema(portfolioTags).omit({
+  id: true
+});
+
 // Types
 export type FileOperation = typeof fileOperations.$inferSelect;
 export type InsertFileOperation = z.infer<typeof insertFileOperationSchema>;
@@ -69,6 +164,20 @@ export type DailyReport = typeof dailyReports.$inferSelect;
 export type InsertDailyReport = z.infer<typeof insertDailyReportSchema>;
 export type Log = typeof logs.$inferSelect;
 export type InsertLog = z.infer<typeof insertLogSchema>;
+
+// Midnight Magnolia Integration Types
+export type MMFile = typeof mmFiles.$inferSelect;
+export type InsertMMFile = z.infer<typeof insertMMFileSchema>;
+export type MMFileAssessment = typeof mmFileAssessments.$inferSelect;
+export type InsertMMFileAssessment = z.infer<typeof insertMMFileAssessmentSchema>;
+export type MMFileOperation = typeof mmFileOperations.$inferSelect;
+export type InsertMMFileOperation = z.infer<typeof insertMMFileOperationSchema>;
+export type PortfolioItem = typeof portfolioItems.$inferSelect;
+export type InsertPortfolioItem = z.infer<typeof insertPortfolioItemSchema>;
+export type PortfolioMedia = typeof portfolioMedia.$inferSelect;
+export type InsertPortfolioMedia = z.infer<typeof insertPortfolioMediaSchema>;
+export type PortfolioTag = typeof portfolioTags.$inferSelect;
+export type InsertPortfolioTag = z.infer<typeof insertPortfolioTagSchema>;
 
 export interface DirectoryEntry {
   name: string;
