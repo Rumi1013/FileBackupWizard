@@ -2,7 +2,7 @@ import { FileManager } from "@/components/FileManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { FileIcon, EyeIcon } from "lucide-react";
+import { FileIcon, EyeIcon, Sparkles } from "lucide-react";
 
 export default function Home() {
   return (
@@ -13,6 +13,12 @@ export default function Home() {
           <p className="text-muted-foreground">Organize, assess and preview your files</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/recommendations">
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI Recommendations
+            </Link>
+          </Button>
           <Button asChild>
             <Link to="/preview">
               <EyeIcon className="h-4 w-4 mr-2" />
@@ -24,17 +30,25 @@ export default function Home() {
       
       <Card className="mx-auto max-w-7xl">
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle className="text-2xl font-bold">File Manager</CardTitle>
               <CardDescription>Browse, manage and organize your files</CardDescription>
             </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/preview">
-                <FileIcon className="h-4 w-4 mr-2" />
-                Preview Files
-              </Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/recommendations">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Get Recommendations
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/preview">
+                  <FileIcon className="h-4 w-4 mr-2" />
+                  Preview Files
+                </Link>
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
