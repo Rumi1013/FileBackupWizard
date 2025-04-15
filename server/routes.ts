@@ -14,6 +14,7 @@ import {
 } from "@shared/schema";
 import { DatabaseStorage } from "./storage";
 import multer from 'multer';
+import recommendationRoutes from './recommendation-routes';
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -593,6 +594,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: `Failed to add portfolio tag: ${error}` });
     }
   });
+
+  // Register recommendation routes
+  app.use('/api/recommendations', recommendationRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

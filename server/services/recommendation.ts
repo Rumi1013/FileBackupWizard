@@ -1,16 +1,13 @@
-import * as fs from 'fs/promises';
-import { db } from '../db';
-import { eq } from 'drizzle-orm';
-import { 
-  fileRecommendations,
-  FileRecommendationType,
-  InsertFileRecommendationType,
-  recommendationFeedback,
-  InsertRecommendationFeedbackType,
-  mmFiles,
-  MMFile
-} from '@shared/schema';
+import { storage } from '../storage';
 import { generateFileRecommendations, batchGenerateRecommendations } from './openai';
+import type { 
+  FileRecommendationType, 
+  InsertFileRecommendationType,
+  FileOperation,
+  QualityMetrics
+} from '@shared/schema';
+import fs from 'fs/promises';
+import path from 'path';
 
 /**
  * Recommendation Service
@@ -22,32 +19,45 @@ export class RecommendationService {
    */
   async createRecommendation(fileId: string): Promise<FileRecommendationType[]> {
     try {
-      // 1. Get the file from the database
-      const [file] = await db.select().from(mmFiles).where(eq(mmFiles.id, fileId));
+      // Get file information from storage
+      const file = await storage.getMMFileById(fileId);
       
       if (!file) {
         throw new Error(`File with ID ${fileId} not found`);
       }
       
-      // 2. Read the file content from the filesystem
+      // For text-based files, we need to read the content
       let content = '';
-      try {
-        content = await fs.readFile(file.path, 'utf-8');
-      } catch (error) {
-        console.error(`Error reading file content: ${error.message}`);
-        content = ''; // If we can't read the file, we'll generate recommendations with empty content
+      if (['.txt', '.md', '.js', '.ts', '.py', '.html', '.css', '.json'].includes(
+        path.extname(file.path).toLowerCase())
+      ) {
+        try {
+          content = await fs.readFile(file.path, 'utf-8');
+        } catch (error) {
+          console.error(`Error reading file content: ${error}`);
+          throw new Error(`Failed to read file content: ${error}`);
+        }
       }
       
-      // 3. Generate recommendations using AI
-      const recommendations = await generateFileRecommendations(file, content);
+      // Get file quality metrics if available
+      let metrics: QualityMetrics | undefined;
+      try {
+        // This is an approximation - in a real system, we'd retrieve stored metrics
+        const assessment = await storage.assessFile(file.path);
+        metrics = assessment.metadata as QualityMetrics;
+      } catch (error) {
+        console.warn(`Could not get quality metrics for file: ${error}`);
+        // Continue without metrics if they're not available
+      }
       
-      // 4. Store the recommendations in the database
-      const insertedRecommendations = await this.storeRecommendations(recommendations);
+      // Generate recommendations using OpenAI
+      const recommendations = await generateFileRecommendations(file, content, metrics);
       
-      return insertedRecommendations;
+      // Store recommendations in storage
+      return this.storeRecommendations(recommendations);
     } catch (error) {
-      console.error(`Error creating recommendations: ${error.message}`);
-      throw error;
+      console.error(`Error creating recommendation: ${error}`);
+      throw new Error(`Failed to create recommendation: ${error}`);
     }
   }
   
@@ -56,36 +66,49 @@ export class RecommendationService {
    */
   async createBatchRecommendations(fileIds: string[]): Promise<FileRecommendationType[]> {
     try {
-      // 1. Get all files from the database
-      const files = await db.select().from(mmFiles).where(
-        fileIds.length > 0 ? 
-          fileIds.map(id => eq(mmFiles.id, id)).reduce((a, b) => a || b) :
-          undefined
-      );
+      const fileData = [];
       
-      // Prepare the array of files with their content
-      const filesWithContent = await Promise.all(
-        files.map(async (file) => {
-          let content = '';
+      // Collect all file data
+      for (const fileId of fileIds) {
+        const file = await storage.getMMFileById(fileId);
+        
+        if (!file) {
+          console.warn(`File with ID ${fileId} not found, skipping`);
+          continue;
+        }
+        
+        // For text-based files, read the content
+        let content = '';
+        if (['.txt', '.md', '.js', '.ts', '.py', '.html', '.css', '.json'].includes(
+          path.extname(file.path).toLowerCase())
+        ) {
           try {
             content = await fs.readFile(file.path, 'utf-8');
           } catch (error) {
-            console.error(`Error reading file ${file.id}: ${error.message}`);
+            console.warn(`Could not read content for file ${fileId}, using empty content`);
           }
-          return { file, content };
-        })
-      );
+        }
+        
+        // Get file quality metrics if available
+        let metrics: QualityMetrics | undefined;
+        try {
+          const assessment = await storage.assessFile(file.path);
+          metrics = assessment.metadata as QualityMetrics;
+        } catch (error) {
+          console.warn(`Could not get quality metrics for file ${fileId}`);
+        }
+        
+        fileData.push({ file, content, metrics });
+      }
       
-      // 2. Generate recommendations for all files
-      const recommendations = await batchGenerateRecommendations(filesWithContent);
+      // Generate batch recommendations
+      const batchRecommendations = await batchGenerateRecommendations(fileData);
       
-      // 3. Store the recommendations in the database
-      const insertedRecommendations = await this.storeRecommendations(recommendations);
-      
-      return insertedRecommendations;
+      // Store all recommendations
+      return this.storeRecommendations(batchRecommendations);
     } catch (error) {
-      console.error(`Error creating batch recommendations: ${error.message}`);
-      throw error;
+      console.error(`Error creating batch recommendations: ${error}`);
+      throw new Error(`Failed to create batch recommendations: ${error}`);
     }
   }
   
@@ -95,74 +118,79 @@ export class RecommendationService {
   private async storeRecommendations(
     recommendations: InsertFileRecommendationType[]
   ): Promise<FileRecommendationType[]> {
-    if (recommendations.length === 0) {
-      return [];
+    const storedRecommendations: FileRecommendationType[] = [];
+    
+    for (const recommendation of recommendations) {
+      try {
+        const stored = await storage.createFileRecommendation(recommendation);
+        storedRecommendations.push(stored);
+      } catch (error) {
+        console.error(`Error storing recommendation: ${error}`);
+      }
     }
     
-    // Insert all recommendations into the database
-    return await db.insert(fileRecommendations)
-      .values(recommendations)
-      .returning();
+    return storedRecommendations;
   }
   
   /**
    * Gets all recommendations for a specific file
    */
   async getRecommendationsForFile(fileId: string): Promise<FileRecommendationType[]> {
-    return await db
-      .select()
-      .from(fileRecommendations)
-      .where(eq(fileRecommendations.fileId, fileId));
+    try {
+      return await storage.getFileRecommendations(fileId);
+    } catch (error) {
+      console.error(`Error getting recommendations for file: ${error}`);
+      throw new Error(`Failed to get recommendations for file: ${error}`);
+    }
   }
   
   /**
    * Gets all recommendations based on a specific type
    */
   async getRecommendationsByType(type: string): Promise<FileRecommendationType[]> {
-    return await db
-      .select()
-      .from(fileRecommendations)
-      .where(eq(fileRecommendations.recommendationType, type));
+    try {
+      return await storage.getRecommendationsByType(type);
+    } catch (error) {
+      console.error(`Error getting recommendations by type: ${error}`);
+      throw new Error(`Failed to get recommendations by type: ${error}`);
+    }
   }
   
   /**
    * Mark a recommendation as implemented
    */
   async markRecommendationImplemented(
-    recommendationId: string, 
+    id: string, 
     implemented: boolean = true
   ): Promise<FileRecommendationType> {
-    const [updated] = await db
-      .update(fileRecommendations)
-      .set({ implemented })
-      .where(eq(fileRecommendations.id, recommendationId))
-      .returning();
-      
-    if (!updated) {
-      throw new Error(`Recommendation with ID ${recommendationId} not found`);
+    try {
+      return await storage.markRecommendationImplemented(id, implemented);
+    } catch (error) {
+      console.error(`Error marking recommendation as implemented: ${error}`);
+      throw new Error(`Failed to mark recommendation as implemented: ${error}`);
     }
-    
-    return updated;
   }
   
   /**
    * Add feedback for a recommendation
    */
   async addRecommendationFeedback(
-    feedback: InsertRecommendationFeedbackType
-  ): Promise<InsertRecommendationFeedbackType> {
-    const [inserted] = await db
-      .insert(recommendationFeedback)
-      .values(feedback)
-      .returning();
-      
-    return inserted;
+    feedback: { recommendationId: string; helpful: boolean; feedbackText?: string | null }
+  ) {
+    try {
+      return await storage.addRecommendationFeedback(feedback);
+    } catch (error) {
+      console.error(`Error adding recommendation feedback: ${error}`);
+      throw new Error(`Failed to add recommendation feedback: ${error}`);
+    }
   }
   
   /**
    * Get all recommendations
    */
   async getAllRecommendations(): Promise<FileRecommendationType[]> {
-    return await db.select().from(fileRecommendations);
+    // This is a placeholder for future implementation
+    // We would need to add a method to the storage interface
+    throw new Error('Method not implemented');
   }
 }

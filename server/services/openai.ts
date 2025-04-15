@@ -1,50 +1,59 @@
 import OpenAI from "openai";
-import { 
-  FileRecommendationType, 
-  InsertFileRecommendationType, 
-  MMFile,
-  AIRecommendationResult,
+import type { 
+  MMFile, 
+  InsertFileRecommendationType,
   QualityMetrics
-} from "@shared/schema";
+} from '@shared/schema';
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const OPENAI_MODEL = "gpt-4o";
+// Create an OpenAI client using the environment variable
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "" });
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Define type for AI recommendation results
+interface AIRecommendationResult {
+  recommendations: {
+    type: string;
+    text: string;
+    priority: string;
+  }[];
+}
 
 /**
  * Analyzes file content and generates recommendations.
  */
 export async function generateFileRecommendations(
   file: MMFile,
-  content: string,
+  fileContent: string,
   fileQualityMetrics?: QualityMetrics
 ): Promise<InsertFileRecommendationType[]> {
   try {
-    // Prepare prompt with file information and metrics
-    const prompt = prepareRecommendationPrompt(file, content, fileQualityMetrics);
+    // Prepare prompt with file information and content
+    const prompt = prepareRecommendationPrompt(file, fileContent, fileQualityMetrics);
     
-    // Call OpenAI API
+    // Call OpenAI API for recommendations
     const response = await openai.chat.completions.create({
-      model: OPENAI_MODEL,
+      model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [
         {
-          role: "system", 
-          content: "You are an expert file organizer and content analyst specializing in helping neurodivergent users organize their files efficiently."
+          role: "system",
+          content: "You are an expert file management assistant specialized in analyzing files and providing actionable recommendations for organization, improvement, and optimization."
         },
-        { role: "user", content: prompt }
+        {
+          role: "user",
+          content: prompt
+        }
       ],
+      temperature: 0.7,
       response_format: { type: "json_object" }
     });
-
-    // Parse the response
-    const aiResponse = JSON.parse(response.choices[0].message.content);
     
-    // Convert AI response to our schema format
-    return convertAIResponseToRecommendations(aiResponse, file.id);
+    // Parse the AI response
+    const result = JSON.parse(response.choices[0].message.content || "{}") as AIRecommendationResult;
+    
+    // Convert AI response to our database schema format
+    return convertAIResponseToRecommendations(result, file.id);
   } catch (error) {
     console.error("Error generating file recommendations:", error);
-    throw new Error(`Failed to generate file recommendations: ${error.message}`);
+    throw new Error(`OpenAI recommendation generation failed: ${error}`);
   }
 }
 
@@ -53,56 +62,109 @@ export async function generateFileRecommendations(
  */
 function prepareRecommendationPrompt(
   file: MMFile, 
-  content: string, 
+  fileContent: string,
   metrics?: QualityMetrics
 ): string {
-  const contentPreview = content.substring(0, 2000) + (content.length > 2000 ? '...' : '');
+  // File extension to determine file type
+  const ext = file.type.toLowerCase();
   
-  return `I need recommendations for organizing and improving the following file:
+  // Create a concise representation of the file content
+  let contentSummary: string;
+  if (fileContent.length > 1000) {
+    contentSummary = fileContent.substring(0, 1000) + "... (content truncated)";
+  } else {
+    contentSummary = fileContent;
+  }
   
-File Information:
-- Name: ${file.name}
-- Type: ${file.type}
-- Size: ${file.size} bytes
-- Created: ${file.createdAt}
-- Last Modified: ${file.updatedAt}
-
-${metrics ? `Quality Metrics:\n${JSON.stringify(metrics, null, 2)}\n` : ''}
-
-Content Preview:
-${contentPreview}
-
-Please analyze this file and provide the following in JSON format:
-1. A list of recommendations with the following properties for each:
-   - recommendation_type: One of "quality_improvement", "monetization", "organization", or "deletion"
-   - recommendation_text: A specific, actionable recommendation
-   - priority: "high", "medium", or "low"
-   - metadata: Any additional information that might be helpful
-
-2. Insights about the file including:
-   - improvement_opportunities: Number of possible improvements
-   - monetization_potential: "high", "medium", or "low"
-   - organization_score: A number between 0-100 indicating how well organized the file is
-
-3. A brief summary of your analysis
-
-Please return your response in the following JSON format:
-{
-  "recommendations": [
-    {
-      "recommendation_type": string,
-      "recommendation_text": string,
-      "priority": string,
-      "metadata": object
+  // Base prompt structure
+  let prompt = `
+    Please analyze the following file and provide recommendations:
+    
+    FILE INFORMATION:
+    - Name: ${file.name}
+    - Type: ${file.type}
+    - Size: ${file.size} bytes
+    
+    FILE CONTENT:
+    ${contentSummary}
+  `;
+  
+  // Add quality metrics if available
+  if (metrics) {
+    prompt += `\nQUALITY METRICS:\n`;
+    
+    if (metrics.codeQuality) {
+      prompt += `
+        Code Quality:
+        - Linting Score: ${metrics.codeQuality.lintingScore}
+        - Complexity: ${metrics.codeQuality.complexity}
+        - Documentation: ${metrics.codeQuality.documentation}
+      `;
     }
-  ],
-  "insights": {
-    "improvement_opportunities": number,
-    "monetization_potential": string,
-    "organization_score": number
-  },
-  "summary": string
-}`;
+    
+    if (metrics.documentQuality) {
+      prompt += `
+        Document Quality:
+        - Readability: ${metrics.documentQuality.readability}
+        - Formatting: ${metrics.documentQuality.formatting}
+        - Completeness: ${metrics.documentQuality.completeness}
+      `;
+    }
+    
+    if (metrics.imageQuality) {
+      prompt += `
+        Image Quality:
+        - Resolution: ${metrics.imageQuality.resolution}
+        - Color Profile: ${metrics.imageQuality.colorProfile}
+        - Compression: ${metrics.imageQuality.compression}
+      `;
+    }
+  }
+  
+  // Add specific instructions based on file type
+  if (['.js', '.ts', '.jsx', '.tsx', '.py', '.java', '.c', '.cpp'].includes(ext)) {
+    prompt += `
+      Please focus on:
+      - Code quality improvements
+      - Performance optimizations
+      - Best practices
+      - Documentation needs
+    `;
+  } else if (['.md', '.txt', '.doc', '.docx', '.pdf'].includes(ext)) {
+    prompt += `
+      Please focus on:
+      - Readability improvements
+      - Structure and organization
+      - Content completeness
+      - Formatting suggestions
+    `;
+  } else if (['.jpg', '.jpeg', '.png', '.gif', '.svg'].includes(ext)) {
+    prompt += `
+      Please focus on:
+      - File optimization
+      - Metadata improvements
+      - Format conversion suggestions
+      - Organization recommendations
+    `;
+  }
+  
+  // Final instruction for output format
+  prompt += `
+    Please provide your recommendations in the following JSON format:
+    {
+      "recommendations": [
+        {
+          "type": "improvement|organization|optimization|security|accessibility",
+          "text": "Detailed recommendation text",
+          "priority": "high|medium|low"
+        }
+      ]
+    }
+    
+    Provide 3-5 specific, actionable recommendations.
+  `;
+  
+  return prompt;
 }
 
 /**
@@ -112,12 +174,16 @@ function convertAIResponseToRecommendations(
   aiResponse: AIRecommendationResult, 
   fileId: string
 ): InsertFileRecommendationType[] {
+  if (!aiResponse.recommendations || !Array.isArray(aiResponse.recommendations)) {
+    return [];
+  }
+  
   return aiResponse.recommendations.map(rec => ({
     fileId,
-    recommendationType: rec.recommendation_type,
-    recommendationText: rec.recommendation_text,
+    recommendationType: rec.type,
+    recommendationText: rec.text,
     priority: rec.priority,
-    metadata: rec.metadata
+    metadata: {}
   }));
 }
 
@@ -129,20 +195,16 @@ export async function batchGenerateRecommendations(
 ): Promise<InsertFileRecommendationType[]> {
   const allRecommendations: InsertFileRecommendationType[] = [];
   
-  // Process files in batches to prevent rate limiting
-  const batchSize = 5;
-  for (let i = 0; i < files.length; i += batchSize) {
-    const batch = files.slice(i, i + batchSize);
-    
-    // Generate recommendations for each file in the batch
-    const batchPromises = batch.map(({file, content, metrics}) => 
-      generateFileRecommendations(file, content, metrics)
-    );
-    
-    const batchResults = await Promise.all(batchPromises);
-    
-    // Flatten the results and add to all recommendations
-    allRecommendations.push(...batchResults.flat());
+  // Process each file sequentially
+  // In a production environment, we might want to implement parallel processing with rate limiting
+  for (const { file, content, metrics } of files) {
+    try {
+      const recommendations = await generateFileRecommendations(file, content, metrics);
+      allRecommendations.push(...recommendations);
+    } catch (error) {
+      console.error(`Error generating recommendations for file ${file.id}:`, error);
+      // Continue with other files even if one fails
+    }
   }
   
   return allRecommendations;
