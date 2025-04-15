@@ -1,6 +1,7 @@
 import { 
   fileOperations, logs, 
   mmFiles, mmFileAssessments, mmFileOperations, portfolioItems, portfolioMedia, portfolioTags,
+  fileRecommendations, recommendationFeedback,
   type FileOperation, type InsertFileOperation, 
   type Log, type InsertLog, 
   type DirectoryEntry, 
@@ -14,7 +15,10 @@ import {
   type MMFileOperation, type InsertMMFileOperation,
   type PortfolioItem, type InsertPortfolioItem,
   type PortfolioMedia, type InsertPortfolioMedia,
-  type PortfolioTag, type InsertPortfolioTag
+  type PortfolioTag, type InsertPortfolioTag,
+  // Recommendation System Types
+  type FileRecommendationType, type InsertFileRecommendationType,
+  type RecommendationFeedbackType, type InsertRecommendationFeedbackType
 } from "@shared/schema";
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -37,6 +41,13 @@ export interface IStorage {
   createDirectory(dirPath: string): Promise<void>;
   isValidFileType(filename: string): boolean;
   applyOrganizationRules(filePath: string): Promise<void>;
+  
+  // Recommendation system methods
+  createFileRecommendation(recommendation: InsertFileRecommendationType): Promise<FileRecommendationType>;
+  getFileRecommendations(fileId: string): Promise<FileRecommendationType[]>;
+  getRecommendationsByType(type: string): Promise<FileRecommendationType[]>;
+  markRecommendationImplemented(id: string, implemented?: boolean): Promise<FileRecommendationType>;
+  addRecommendationFeedback(feedback: InsertRecommendationFeedbackType): Promise<RecommendationFeedbackType>;
 }
 
 const VALID_FILE_TYPES = [
