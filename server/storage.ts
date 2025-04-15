@@ -28,6 +28,7 @@ import { Stats } from 'fs';
 import type { Multer } from 'multer';
 import { db } from './db';
 import { eq, asc, desc } from 'drizzle-orm';
+import crypto from 'crypto';
 
 export interface IStorage {
   addFileOperation(operation: InsertFileOperation): Promise<FileOperation>;
@@ -81,6 +82,8 @@ export class MemStorage implements IStorage {
   private analysisEntries: Map<number, ContentAnalysis>;
   private fileAssessments: Map<number, FileAssessment>;
   private dailyReports: Map<number, DailyReport>;
+  private fileRecommendations: Map<string, FileRecommendationType>;
+  private recommendationFeedbacks: Map<string, RecommendationFeedbackType>;
   private currentFileOpId: number;
   private currentLogId: number;
   private currentAnalysisId: number;
@@ -93,6 +96,8 @@ export class MemStorage implements IStorage {
     this.analysisEntries = new Map();
     this.fileAssessments = new Map();
     this.dailyReports = new Map();
+    this.fileRecommendations = new Map();
+    this.recommendationFeedbacks = new Map();
     this.currentFileOpId = 1;
     this.currentLogId = 1;
     this.currentAnalysisId = 1;
@@ -469,6 +474,77 @@ export class MemStorage implements IStorage {
     } catch (error) {
       throw new Error(`Failed to create directory: ${error}`);
     }
+  }
+  
+  // Recommendation system methods
+  async createFileRecommendation(recommendation: InsertFileRecommendationType): Promise<FileRecommendationType> {
+    const id = crypto.randomUUID();
+    const now = new Date();
+    
+    const fullRecommendation: FileRecommendationType = {
+      ...recommendation,
+      id,
+      createdAt: now,
+      implemented: false
+    };
+    
+    this.fileRecommendations.set(id, fullRecommendation);
+    await this.addLog({
+      level: 'info',
+      message: `Created file recommendation for file ID: ${recommendation.fileId}`
+    });
+    
+    return fullRecommendation;
+  }
+  
+  async getFileRecommendations(fileId: string): Promise<FileRecommendationType[]> {
+    return Array.from(this.fileRecommendations.values())
+      .filter(rec => rec.fileId === fileId);
+  }
+  
+  async getRecommendationsByType(type: string): Promise<FileRecommendationType[]> {
+    return Array.from(this.fileRecommendations.values())
+      .filter(rec => rec.recommendationType === type);
+  }
+  
+  async markRecommendationImplemented(id: string, implemented: boolean = true): Promise<FileRecommendationType> {
+    const recommendation = this.fileRecommendations.get(id);
+    
+    if (!recommendation) {
+      throw new Error(`Recommendation with ID ${id} not found`);
+    }
+    
+    const updatedRecommendation = {
+      ...recommendation,
+      implemented
+    };
+    
+    this.fileRecommendations.set(id, updatedRecommendation);
+    await this.addLog({
+      level: 'info',
+      message: `Marked recommendation ${id} as ${implemented ? 'implemented' : 'not implemented'}`
+    });
+    
+    return updatedRecommendation;
+  }
+  
+  async addRecommendationFeedback(feedback: InsertRecommendationFeedbackType): Promise<RecommendationFeedbackType> {
+    const id = crypto.randomUUID();
+    const now = new Date();
+    
+    const fullFeedback: RecommendationFeedbackType = {
+      ...feedback,
+      id,
+      createdAt: now
+    };
+    
+    this.recommendationFeedbacks.set(id, fullFeedback);
+    await this.addLog({
+      level: 'info',
+      message: `Added feedback for recommendation ID: ${feedback.recommendationId}`
+    });
+    
+    return fullFeedback;
   }
 }
 
@@ -869,6 +945,103 @@ export class DatabaseStorage implements IStorage {
   async getMMFileById(id: string): Promise<MMFile | undefined> {
     const [file] = await db.select().from(mmFiles).where(eq(mmFiles.id, id));
     return file;
+  }
+  
+  // Recommendation system methods
+  async createFileRecommendation(recommendation: InsertFileRecommendationType): Promise<FileRecommendationType> {
+    try {
+      const [inserted] = await db
+        .insert(fileRecommendations)
+        .values({
+          fileId: recommendation.fileId,
+          recommendationType: recommendation.recommendationType,
+          recommendationText: recommendation.recommendationText,
+          priority: recommendation.priority,
+          metadata: recommendation.metadata || {}
+        })
+        .returning();
+      
+      await this.addLog({
+        level: 'info',
+        message: `Created file recommendation for file ID: ${recommendation.fileId}`
+      });
+      
+      return inserted;
+    } catch (error) {
+      console.error("Error creating file recommendation:", error);
+      throw new Error(`Failed to create file recommendation: ${error}`);
+    }
+  }
+  
+  async getFileRecommendations(fileId: string): Promise<FileRecommendationType[]> {
+    try {
+      return await db
+        .select()
+        .from(fileRecommendations)
+        .where(eq(fileRecommendations.fileId, fileId));
+    } catch (error) {
+      console.error("Error getting file recommendations:", error);
+      throw new Error(`Failed to get file recommendations: ${error}`);
+    }
+  }
+  
+  async getRecommendationsByType(type: string): Promise<FileRecommendationType[]> {
+    try {
+      return await db
+        .select()
+        .from(fileRecommendations)
+        .where(eq(fileRecommendations.recommendationType, type));
+    } catch (error) {
+      console.error("Error getting recommendations by type:", error);
+      throw new Error(`Failed to get recommendations by type: ${error}`);
+    }
+  }
+  
+  async markRecommendationImplemented(id: string, implemented: boolean = true): Promise<FileRecommendationType> {
+    try {
+      const [updated] = await db
+        .update(fileRecommendations)
+        .set({ implemented })
+        .where(eq(fileRecommendations.id, id))
+        .returning();
+      
+      if (!updated) {
+        throw new Error(`Recommendation with ID ${id} not found`);
+      }
+      
+      await this.addLog({
+        level: 'info',
+        message: `Marked recommendation ${id} as ${implemented ? 'implemented' : 'not implemented'}`
+      });
+      
+      return updated;
+    } catch (error) {
+      console.error("Error marking recommendation implemented:", error);
+      throw new Error(`Failed to mark recommendation as implemented: ${error}`);
+    }
+  }
+  
+  async addRecommendationFeedback(feedback: InsertRecommendationFeedbackType): Promise<RecommendationFeedbackType> {
+    try {
+      const [inserted] = await db
+        .insert(recommendationFeedback)
+        .values({
+          recommendationId: feedback.recommendationId,
+          helpful: feedback.helpful,
+          feedbackText: feedback.feedbackText || null
+        })
+        .returning();
+      
+      await this.addLog({
+        level: 'info',
+        message: `Added feedback for recommendation ID: ${feedback.recommendationId}`
+      });
+      
+      return inserted;
+    } catch (error) {
+      console.error("Error adding recommendation feedback:", error);
+      throw new Error(`Failed to add recommendation feedback: ${error}`);
+    }
   }
 
   // File assessment methods
