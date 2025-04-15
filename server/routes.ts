@@ -15,6 +15,7 @@ import {
 import { DatabaseStorage } from "./storage";
 import multer from 'multer';
 import recommendationRoutes from './recommendation-routes';
+import previewRoutes from './preview-routes';
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
@@ -597,6 +598,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register recommendation routes
   app.use('/api/recommendations', recommendationRoutes);
+  
+  // Register file preview routes
+  app.use('/api/previews', previewRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

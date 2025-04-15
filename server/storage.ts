@@ -627,10 +627,18 @@ export class MemStorage implements IStorage {
   }
   
   async getFilePreviewById(fileId: string, previewType: string = 'text'): Promise<FilePreview> {
-    // In the in-memory storage, we don't have a direct way to look up files by ID
-    // This would typically be implemented by finding the file in the database
-    // For now, we'll throw an error saying this method is not implemented
-    throw new Error('getFilePreviewById not implemented for in-memory storage');
+    // In the in-memory storage implementation, we'll maintain a simple mapping of file IDs to file paths
+    // For our test implementation, we'll look for any file operation with a matching target path
+    
+    const fileOperations = Array.from(this.fileOps.values());
+    const fileOp = fileOperations.find(op => op.id.toString() === fileId);
+    
+    if (!fileOp || !fileOp.targetPath) {
+      throw new Error(`File with ID ${fileId} not found`);
+    }
+    
+    // Use the file path to generate a preview
+    return this.getFilePreview(fileOp.targetPath, previewType);
   }
 }
 
@@ -1163,6 +1171,109 @@ export class DatabaseStorage implements IStorage {
   async addPortfolioTag(tag: InsertPortfolioTag): Promise<PortfolioTag> {
     const [portfolioTag] = await db.insert(portfolioTags).values(tag).returning();
     return portfolioTag;
+  }
+  
+  // File preview methods
+  async getFilePreview(filePath: string, previewType: string = 'text'): Promise<FilePreview> {
+    try {
+      const stats = await fs.stat(filePath);
+      const fileName = path.basename(filePath);
+      const fileType = path.extname(filePath).toLowerCase();
+      
+      let content = '';
+      let truncated = false;
+      const maxPreviewSize = 100 * 1024; // 100KB max preview size
+      
+      // Handle different preview types based on file extension
+      if (previewType === 'text' && ['.txt', '.md', '.js', '.ts', '.jsx', '.tsx', '.html', '.css', '.json', '.py'].includes(fileType)) {
+        if (stats.size > maxPreviewSize) {
+          // If file is too large, read only the first maxPreviewSize bytes
+          const buffer = Buffer.alloc(maxPreviewSize);
+          const fileHandle = await fs.open(filePath, 'r');
+          await fileHandle.read(buffer, 0, maxPreviewSize, 0);
+          await fileHandle.close();
+          content = buffer.toString('utf-8');
+          truncated = true;
+        } else {
+          content = await fs.readFile(filePath, 'utf-8');
+        }
+      } else if (previewType === 'image' && ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg'].includes(fileType)) {
+        // For image files in a database implementation, we would typically return a base64 representation
+        // or a URL to access the image via a separate endpoint
+        content = 'IMAGE_CONTENT_BASE64';
+      } else if (previewType === 'binary' && ['.doc', '.docx', '.pdf', '.xls', '.xlsx'].includes(fileType)) {
+        // For binary files, return metadata only
+        content = 'BINARY_DOCUMENT_METADATA';
+      } else {
+        // Generic handling for unsupported file types
+        content = `File type ${fileType} preview not supported`;
+      }
+      
+      // Create a unique ID for the preview
+      const id = crypto.randomUUID();
+      
+      // Check if this file is in our database
+      const mmFile = await this.getMMFileByPath(filePath);
+      
+      const preview: FilePreview = {
+        id,
+        filePath,
+        fileName,
+        fileType,
+        previewType,
+        content,
+        truncated,
+        size: stats.size,
+        lastModified: stats.mtime,
+        metadata: {
+          fileId: mmFile?.id || null,
+          accessTime: stats.atime,
+          changeTime: stats.ctime,
+          permissions: stats.mode,
+          isDirectory: stats.isDirectory(),
+          isFile: stats.isFile()
+        }
+      };
+      
+      await this.addLog({
+        level: 'info',
+        message: `Generated ${previewType} preview for file: ${filePath}`
+      });
+      
+      return preview;
+    } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to generate preview for file: ${error}`
+      });
+      throw new Error(`Failed to generate preview: ${error}`);
+    }
+  }
+  
+  async getFilePreviewById(fileId: string, previewType: string = 'text'): Promise<FilePreview> {
+    try {
+      // Get the file from the database
+      const file = await this.getMMFileById(fileId);
+      
+      if (!file) {
+        throw new Error(`File with ID ${fileId} not found`);
+      }
+      
+      // Use the file path to generate a preview
+      return this.getFilePreview(file.path, previewType);
+    } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to generate preview for file ID ${fileId}: ${error}`
+      });
+      throw error;
+    }
+  }
+  
+  // Helper method to find a file by path
+  private async getMMFileByPath(filePath: string): Promise<MMFile | undefined> {
+    const [file] = await db.select().from(mmFiles).where(eq(mmFiles.path, filePath));
+    return file;
   }
 }
 
