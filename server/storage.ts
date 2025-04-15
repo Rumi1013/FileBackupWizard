@@ -1,14 +1,13 @@
 import { 
-  fileOperations, logs, contentAnalysis, 
+  fileOperations, logs, 
   mmFiles, mmFileAssessments, mmFileOperations, portfolioItems, portfolioMedia, portfolioTags,
   type FileOperation, type InsertFileOperation, 
   type Log, type InsertLog, 
   type DirectoryEntry, 
-  type ContentAnalysis, type InsertContentAnalysis, 
-  type ContentSuggestion, 
   type FileAssessment, type InsertFileAssessment, 
   type DailyReport, type InsertDailyReport, 
   type QualityMetrics, type FileOrganizationRules,
+  type ContentAnalysis, type ContentSuggestion,
   // Midnight Magnolia Integration Types
   type MMFile, type InsertMMFile,
   type MMFileAssessment, type InsertMMFileAssessment,

@@ -211,6 +211,22 @@ export interface QualityMetrics {
   };
 }
 
+export interface ContentSuggestion {
+  category: string;
+  priority: string;
+  suggestion: string;
+  reason: string;
+}
+
+export interface ContentAnalysis {
+  id: number;
+  filePath: string;
+  readabilityScore: string;
+  suggestions: ContentSuggestion[];
+  organizationTips: string[];
+  timestamp: Date;
+}
+
 export interface FileOrganizationRules {
   qualityThresholds: {
     code: number;
