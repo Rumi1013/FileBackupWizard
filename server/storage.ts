@@ -18,7 +18,9 @@ import {
   type PortfolioTag, type InsertPortfolioTag,
   // Recommendation System Types
   type FileRecommendationType, type InsertFileRecommendationType,
-  type RecommendationFeedbackType, type InsertRecommendationFeedbackType
+  type RecommendationFeedbackType, type InsertRecommendationFeedbackType,
+  // File Preview Types
+  type FilePreview
 } from "@shared/schema";
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -49,6 +51,10 @@ export interface IStorage {
   getRecommendationsByType(type: string): Promise<FileRecommendationType[]>;
   markRecommendationImplemented(id: string, implemented?: boolean): Promise<FileRecommendationType>;
   addRecommendationFeedback(feedback: InsertRecommendationFeedbackType): Promise<RecommendationFeedbackType>;
+  
+  // File preview methods
+  getFilePreview(filePath: string, previewType?: string): Promise<FilePreview>;
+  getFilePreviewById(fileId: string, previewType?: string): Promise<FilePreview>;
 }
 
 const VALID_FILE_TYPES = [
@@ -545,6 +551,86 @@ export class MemStorage implements IStorage {
     });
     
     return fullFeedback;
+  }
+  
+  // File preview methods
+  async getFilePreview(filePath: string, previewType: string = 'text'): Promise<FilePreview> {
+    try {
+      const stats = await fs.stat(filePath);
+      const fileName = path.basename(filePath);
+      const fileType = path.extname(filePath).toLowerCase();
+      
+      let content = '';
+      let truncated = false;
+      const maxPreviewSize = 100 * 1024; // 100KB max preview size
+      
+      // Handle different preview types based on file extension
+      if (previewType === 'text' && ['.txt', '.md', '.js', '.ts', '.jsx', '.tsx', '.html', '.css', '.json', '.py'].includes(fileType)) {
+        if (stats.size > maxPreviewSize) {
+          // If file is too large, read only the first maxPreviewSize bytes
+          const buffer = Buffer.alloc(maxPreviewSize);
+          const fileHandle = await fs.open(filePath, 'r');
+          await fileHandle.read(buffer, 0, maxPreviewSize, 0);
+          await fileHandle.close();
+          content = buffer.toString('utf-8');
+          truncated = true;
+        } else {
+          content = await fs.readFile(filePath, 'utf-8');
+        }
+      } else if (previewType === 'image' && ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg'].includes(fileType)) {
+        // For image files, we would typically return a base64 representation
+        // This is a simplified version that just indicates an image
+        content = 'IMAGE_CONTENT_BASE64';
+      } else if (previewType === 'binary' && ['.doc', '.docx', '.pdf', '.xls', '.xlsx'].includes(fileType)) {
+        // For document files, we might return metadata or a simplified representation
+        content = 'BINARY_DOCUMENT_CONTENT';
+      } else {
+        // Generic handling for unsupported file types
+        content = `File type ${fileType} preview not supported`;
+      }
+      
+      // Create a unique ID for the preview
+      const id = crypto.randomUUID();
+      
+      const preview: FilePreview = {
+        id,
+        filePath,
+        fileName,
+        fileType,
+        previewType,
+        content,
+        truncated,
+        size: stats.size,
+        lastModified: stats.mtime,
+        metadata: {
+          accessTime: stats.atime,
+          changeTime: stats.ctime,
+          permissions: stats.mode,
+          isDirectory: stats.isDirectory(),
+          isFile: stats.isFile()
+        }
+      };
+      
+      await this.addLog({
+        level: 'info',
+        message: `Generated ${previewType} preview for file: ${filePath}`
+      });
+      
+      return preview;
+    } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to generate preview for file: ${error}`
+      });
+      throw new Error(`Failed to generate preview: ${error}`);
+    }
+  }
+  
+  async getFilePreviewById(fileId: string, previewType: string = 'text'): Promise<FilePreview> {
+    // In the in-memory storage, we don't have a direct way to look up files by ID
+    // This would typically be implemented by finding the file in the database
+    // For now, we'll throw an error saying this method is not implemented
+    throw new Error('getFilePreviewById not implemented for in-memory storage');
   }
 }
 

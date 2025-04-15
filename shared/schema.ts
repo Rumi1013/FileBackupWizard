@@ -325,3 +325,16 @@ export interface AIRecommendationResult {
   };
   summary: string;
 }
+
+export interface FilePreview {
+  id: string;
+  filePath: string;
+  fileName: string;
+  fileType: string;
+  previewType: string;
+  content: string;
+  truncated: boolean;
+  size: number;
+  lastModified: Date;
+  metadata?: Record<string, any>;
+}
