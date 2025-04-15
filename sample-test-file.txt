@@ -1,0 +1,52 @@
+# Midnight Magnolia File Management System
+
+## Overview
+This test file is used to demonstrate the file preview functionality of the Midnight Magnolia File Management System. The system is designed to help users with ADHD or neurodivergent needs better organize and manage their files.
+
+## Key Features
+1. **Intelligent File Assessment**: Files are analyzed based on quality, type, and organization needs.
+2. **ADHD-Friendly Interface**: Designed with simplicity and clarity for easier navigation.
+3. **Automatic Organization**: Files are organized based on predefined rules.
+4. **Daily Reporting**: Get daily summaries of changes and recommendations.
+5. **File Preview**: Preview files directly in the browser without downloading.
+
+## Benefits for Neurodivergent Users
+- Reduces cognitive load through automatic organization
+- Provides visual cues and clear categorization
+- Simplifies file management decisions
+- Offers recommendations tailored to individual needs
+- Creates a more intuitive workflow experience
+
+## How to Use
+1. Upload your files to the system
+2. The system will automatically assess and categorize them
+3. Use the file browser to navigate your organized files
+4. Preview files before opening them
+5. Review recommendations for better organization
+
+## Sample Code
+```javascript
+// Sample JavaScript code for demonstration
+function analyzeFileContent(content) {
+  // Calculate readability metrics
+  const sentences = content.split(/[.!?]+/).length;
+  const words = content.split(/\s+/).length;
+  const avgWordsPerSentence = words / sentences;
+  
+  let readabilityScore;
+  if (avgWordsPerSentence > 25) {
+    readabilityScore = 'Complex';
+  } else if (avgWordsPerSentence > 15) {
+    readabilityScore = 'Moderate';
+  } else {
+    readabilityScore = 'Easy';
+  }
+  
+  return {
+    readabilityScore,
+    suggestions: getReadabilitySuggestions(readabilityScore)
+  };
+}
+```
+
+This text file is designed to help test the preview functionality of the Midnight Magnolia File Management System. It contains a mix of headings, paragraphs, lists, and code snippets to ensure the preview system can handle various types of content.
