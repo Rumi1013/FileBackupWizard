@@ -249,7 +249,10 @@ export async function generateDirectoryRecommendations(dirPath: string): Promise
       );
       
       return storedRecommendations;
-    } catch (fsError) {
+    } catch (error: unknown) {
+      const fsError = error instanceof Error 
+        ? error 
+        : new Error('Unknown error occurred when reading directory');
       console.error(`Error reading directory ${normalizedPath}:`, fsError);
       throw new Error(`Failed to read directory contents: ${fsError.message}`);
     }
