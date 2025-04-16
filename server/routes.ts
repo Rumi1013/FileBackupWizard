@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import path from 'path';
+import fs from 'fs/promises';
 import { 
   insertFileOperationSchema, 
   insertLogSchema, 
@@ -286,10 +287,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log the organization operation
       await storage.addLog({
-        timestamp: new Date().toISOString(),
         level: 'info',
-        message: `Applied organization rules to ${filePath}`,
-        source: 'file-organizer'
+        message: `Applied organization rules to ${filePath}`
       });
       
       res.json({ 
@@ -302,10 +301,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Log the error
       await storage.addLog({
-        timestamp: new Date().toISOString(),
         level: 'error',
-        message: `Failed to apply organization rules: ${error}`,
-        source: 'file-organizer'
+        message: `Failed to apply organization rules: ${error}`
       });
       
       res.status(500).json({ error: `Failed to apply organization rules: ${error}` });
@@ -335,10 +332,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Log the batch operation
       await storage.addLog({
-        timestamp: new Date().toISOString(),
         level: 'info',
-        message: `Batch organization applied to ${results.length} files (${errors.length} failed)`,
-        source: 'file-organizer'
+        message: `Batch organization applied to ${results.length} files (${errors.length} failed)`
       });
 
       res.json({
