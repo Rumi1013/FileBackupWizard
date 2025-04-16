@@ -9,16 +9,18 @@ import {
   Folder, 
   RefreshCw, 
   ChevronRight, 
-  CloudIcon,
+  Cloud,
   DownloadCloud,
   UploadCloud,
   Link,
   ExternalLink,
-  LogIn
+  LogIn,
+  Box,
+  FileText,
+  SquareCode,
+  FileImage,
+  Database
 } from "lucide-react";
-
-// Icons for the external services
-import { SiDropbox, SiGoogledrive, SiOnedrive, SiBox, SiMicrosoftoffice } from "react-icons/si";
 
 interface ExternalServicesProps {
   onNavigate: (path: string) => void;
@@ -137,7 +139,7 @@ export function ExternalServices({ onNavigate, onImport, onConnect }: ExternalSe
                 <CardHeader className="p-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-medium flex items-center">
-                      <SiDropbox className="h-5 w-5 mr-2 text-blue-600" />
+                      <Cloud className="h-5 w-5 mr-2 text-blue-600" />
                       Dropbox
                     </CardTitle>
                     <Button size="sm" variant="ghost">
@@ -158,7 +160,7 @@ export function ExternalServices({ onNavigate, onImport, onConnect }: ExternalSe
                 <CardHeader className="p-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-medium flex items-center">
-                      <SiGoogledrive className="h-5 w-5 mr-2 text-green-600" />
+                      <DownloadCloud className="h-5 w-5 mr-2 text-green-600" />
                       Google Drive
                     </CardTitle>
                     <Button size="sm" variant="ghost">
@@ -179,7 +181,7 @@ export function ExternalServices({ onNavigate, onImport, onConnect }: ExternalSe
                 <CardHeader className="p-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-medium flex items-center">
-                      <SiOnedrive className="h-5 w-5 mr-2 text-blue-500" />
+                      <FileText className="h-5 w-5 mr-2 text-blue-500" />
                       OneDrive
                     </CardTitle>
                     <Button size="sm" variant="ghost">
@@ -200,7 +202,7 @@ export function ExternalServices({ onNavigate, onImport, onConnect }: ExternalSe
                 <CardHeader className="p-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-medium flex items-center">
-                      <SiBox className="h-5 w-5 mr-2 text-blue-700" />
+                      <Box className="h-5 w-5 mr-2 text-blue-700" />
                       Box
                     </CardTitle>
                     <Button size="sm" variant="ghost">
@@ -231,19 +233,19 @@ export function ExternalServices({ onNavigate, onImport, onConnect }: ExternalSe
             </div>
             <div className="grid grid-cols-2 gap-2 mt-4">
               <Button onClick={() => handleAuthCodeSubmit("Dropbox")}>
-                <SiDropbox className="h-4 w-4 mr-2" />
+                <Cloud className="h-4 w-4 mr-2" />
                 Connect Dropbox
               </Button>
               <Button onClick={() => handleAuthCodeSubmit("Google Drive")}>
-                <SiGoogledrive className="h-4 w-4 mr-2" />
+                <DownloadCloud className="h-4 w-4 mr-2" />
                 Connect Google Drive
               </Button>
               <Button onClick={() => handleAuthCodeSubmit("OneDrive")}>
-                <SiOnedrive className="h-4 w-4 mr-2" />
+                <FileText className="h-4 w-4 mr-2" />
                 Connect OneDrive
               </Button>
               <Button onClick={() => handleAuthCodeSubmit("Box")}>
-                <SiBox className="h-4 w-4 mr-2" />
+                <Box className="h-4 w-4 mr-2" />
                 Connect Box
               </Button>
             </div>
