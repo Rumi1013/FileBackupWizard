@@ -858,9 +858,20 @@ export function FileManager() {
           </Card>
         </div>
 
-        {/* Right Panel: File Assessment */}
-        <div>
+        {/* Right Panel: File Assessment & External Services */}
+        <div className="space-y-4">
           <FileAssessment filePath={selectedFile} />
+          
+          <ExternalServices 
+            onNavigate={(path) => setCurrentPath(path)}
+            onImport={() => {}} // Not implementing import functionality yet
+            onConnect={(service, token) => {
+              toast({
+                title: `${service} Connected`,
+                description: `Successfully connected to ${service}`,
+              });
+            }}
+          />
         </div>
       </div>
     </div>
