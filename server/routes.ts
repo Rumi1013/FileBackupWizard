@@ -48,18 +48,30 @@ const upload = multer({
 export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/files/scan', async (req, res) => {
     try {
-      const dirPath = req.query.path as string;
-      if (!dirPath) {
-        return res.status(400).json({ error: 'Directory path is required' });
+      let dirPath = req.query.path as string;
+      
+      // Default to workspace directory if path is empty
+      if (!dirPath || dirPath === '/') {
+        dirPath = '/home/runner/workspace';
+        console.log(`Redirecting root scan to safer workspace directory`);
+        
+        await storage.addLog({
+          level: 'info',
+          message: `Redirected scan from root to workspace directory`
+        });
       }
       
       // Sanitize the path - restrict to user directories only
-      if (dirPath.includes('/proc') || 
-          dirPath.includes('/sys') || 
-          dirPath.includes('/dev') || 
-          dirPath.includes('/tmp') ||
-          dirPath.includes('/etc')) {
-        return res.status(403).json({ 
+      const restrictedDirs = ['/proc', '/sys', '/dev', '/tmp', '/etc', '/var/run', '/var/cache'];
+      if (restrictedDirs.some(dir => dirPath.includes(dir))) {
+        console.log(`Rejecting scan of restricted directory: ${dirPath}`);
+        
+        await storage.addLog({
+          level: 'warn',
+          message: `Rejected scan of restricted directory: ${dirPath}`
+        });
+        
+        return res.json({ 
           error: 'Access to system directories is restricted',
           name: path.basename(dirPath),
           path: dirPath,
@@ -69,6 +81,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Check if the directory exists before scanning
+      try {
+        const stats = await fs.stat(dirPath);
+        if (!stats.isDirectory()) {
+          return res.json({
+            error: 'Not a directory',
+            name: path.basename(dirPath),
+            path: dirPath,
+            type: 'file',
+            children: []
+          });
+        }
+      } catch (statError) {
+        console.error(`Directory not found: ${dirPath}`);
+        return res.json({
+          error: `Directory not found: ${dirPath}`,
+          name: path.basename(dirPath),
+          path: dirPath,
+          type: 'directory',
+          children: []
+        });
+      }
+      
+      // Directory exists and is allowed, proceed with scanning
+      console.log(`Scanning directory: ${dirPath}`);
       const result = await storage.scanDirectory(dirPath);
       res.json(result);
     } catch (error) {
