@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { ChevronRight, ChevronDown, File, Folder } from "lucide-react";
 import type { DirectoryEntry } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ export function DirectoryTree({ data, onSelect }: DirectoryTreeProps) {
     const children = node.children || [];
 
     return (
-      <Fragment key={node.path}>
+      <div key={node.path}>
         <div 
           className={`flex items-center gap-2 py-1 px-2 rounded cursor-pointer
             ${node.type === 'file' ? 'hover:bg-accent' : 'hover:bg-muted'}`}
@@ -79,7 +79,7 @@ export function DirectoryTree({ data, onSelect }: DirectoryTreeProps) {
             {children.map(child => renderNode(child, level + 1))}
           </div>
         )}
-      </Fragment>
+      </div>
     );
   };
 
