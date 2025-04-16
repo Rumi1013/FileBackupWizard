@@ -303,9 +303,9 @@ export interface FileRecommendation {
   recommendation_type: 'quality_improvement' | 'monetization' | 'organization' | 'deletion';
   recommendation_text: string;
   priority: 'high' | 'medium' | 'low';
-  created_at: Date;
+  created_at: string;
   implemented: boolean;
-  metadata: Record<string, any>;
+  metadata?: Record<string, any>;
 }
 
 export interface RecommendationCategory {

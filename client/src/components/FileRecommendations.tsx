@@ -41,21 +41,32 @@ export function FileRecommendations() {
   // Query to get recommendations for a file
   const { data: recommendations, isLoading, error, refetch } = useQuery({
     queryKey: ['/api/recommendations/file', encodeURIComponent(filePath)],
-    queryFn: () => filePath 
-      ? apiRequest(`/api/recommendations/file/${encodeURIComponent(filePath)}`)
-      : Promise.resolve([]),
+    queryFn: async () => {
+      if (!filePath) return [];
+      const response = await fetch(`/api/recommendations/file/${encodeURIComponent(filePath)}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch recommendations');
+      }
+      return response.json();
+    },
     enabled: !!filePath,
   });
   
   // Mutation to generate recommendations for a file
   const generateMutation = useMutation({
-    mutationFn: (path: string) => {
+    mutationFn: async (path: string) => {
       setIsGenerating(true);
-      return apiRequest('/api/recommendations/generate', {
+      const response = await fetch('/api/recommendations/generate', {
         method: 'POST',
         body: JSON.stringify({ filePath: path }),
         headers: { 'Content-Type': 'application/json' },
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate recommendations');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/recommendations/file', encodeURIComponent(filePath)] });
@@ -80,18 +91,24 @@ export function FileRecommendations() {
   
   // Mutation to generate directory recommendations
   const generateDirMutation = useMutation({
-    mutationFn: (path: string) => {
+    mutationFn: async (path: string) => {
       setIsGenerating(true);
-      return apiRequest('/api/recommendations/directory', {
+      const response = await fetch('/api/recommendations/directory', {
         method: 'POST',
         body: JSON.stringify({ dirPath: path }),
         headers: { 'Content-Type': 'application/json' },
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate directory recommendations');
+      }
+      
+      return response.json();
     },
     onSuccess: (data) => {
       toast({
         title: 'Directory Recommendations Generated',
-        description: `${data.length} recommendations were generated for the directory.`,
+        description: `${data.length || 0} recommendations were generated for the directory.`,
         variant: 'default',
       });
       setFilePath(dirPath);
@@ -110,12 +127,18 @@ export function FileRecommendations() {
   
   // Mutation to mark a recommendation as implemented
   const implementMutation = useMutation({
-    mutationFn: ({ id, implemented }: { id: string, implemented: boolean }) => {
-      return apiRequest(`/api/recommendations/${id}/implement`, {
+    mutationFn: async ({ id, implemented }: { id: string, implemented: boolean }) => {
+      const response = await fetch(`/api/recommendations/${id}/implement`, {
         method: 'PATCH',
         body: JSON.stringify({ implemented }),
         headers: { 'Content-Type': 'application/json' },
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update recommendation');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/recommendations/file', encodeURIComponent(filePath)] });
@@ -136,12 +159,18 @@ export function FileRecommendations() {
   
   // Mutation to provide feedback on a recommendation
   const feedbackMutation = useMutation({
-    mutationFn: ({ id, helpful }: { id: string, helpful: boolean }) => {
-      return apiRequest(`/api/recommendations/${id}/feedback`, {
+    mutationFn: async ({ id, helpful }: { id: string, helpful: boolean }) => {
+      const response = await fetch(`/api/recommendations/${id}/feedback`, {
         method: 'POST',
         body: JSON.stringify({ helpful, feedbackText: null }),
         headers: { 'Content-Type': 'application/json' },
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to submit feedback');
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       toast({
