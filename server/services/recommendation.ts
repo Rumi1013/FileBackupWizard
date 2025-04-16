@@ -6,7 +6,11 @@ import {
   FileRecommendation, 
   InsertFileRecommendationType,
   RecommendationFeedbackType,
-  InsertRecommendationFeedbackType
+  InsertRecommendationFeedbackType,
+  QualityMetrics,
+  FileOrganizationRules,
+  mapToFileRecommendation,
+  FileRecommendationType
 } from '@shared/schema';
 import * as openaiService from './openai';
 
@@ -59,23 +63,22 @@ export async function generateRecommendationsForFile(filePath: string): Promise<
     }
     
     // Get file organization rules
-    const organizationRules = {
-      preferredLocations: {
-        images: './images',
-        documents: './docs',
-        code: './src',
-        media: './media'
+    const organizationRules: FileOrganizationRules = {
+      qualityThresholds: {
+        code: 0.7,
+        documents: 0.6,
+        images: 0.5,
+        videos: 0.6
       },
-      namingConventions: {
-        useHyphens: true,
-        useCamelCase: false,
-        includeDate: true,
-        dateFormat: 'YYYY-MM-DD'
+      monetizationCriteria: {
+        minQualityScore: 0.8,
+        requiredMetadata: ['title', 'description', 'keywords'],
+        contentTypes: ['.md', '.doc', '.docx', '.pdf', '.mp4', '.mov']
       },
-      categorization: {
-        byType: true,
-        byProject: true,
-        byDate: false
+      deletionRules: {
+        ageThreshold: 90, // days
+        sizeThreshold: 100 * 1024 * 1024, // 100MB
+        qualityThreshold: 0.3
       }
     };
     
@@ -91,17 +94,16 @@ export async function generateRecommendationsForFile(filePath: string): Promise<
     const storedRecommendations = await Promise.all(
       openaiRecommendations.map(async (rec) => {
         const insertRec: InsertFileRecommendationType = {
-          id: rec.id || uuidv4(),
           fileId: rec.file_id || filePath,
           recommendationType: rec.recommendation_type,
           recommendationText: rec.recommendation_text,
           priority: rec.priority,
           implemented: rec.implemented || false,
-          createdAt: new Date(rec.created_at || new Date()),
           metadata: rec.metadata || {}
         };
         
-        return await storage.createFileRecommendation(insertRec);
+        const dbRec = await storage.createFileRecommendation(insertRec);
+        return mapToFileRecommendation(dbRec);
       })
     );
     
@@ -140,17 +142,16 @@ export async function generateReadabilityRecommendations(filePath: string): Prom
     const storedRecommendations = await Promise.all(
       readabilityRecs.map(async (rec) => {
         const insertRec: InsertFileRecommendationType = {
-          id: rec.id || uuidv4(),
           fileId: rec.file_id || filePath,
           recommendationType: 'quality_improvement',
           recommendationText: rec.recommendation_text,
           priority: rec.priority,
           implemented: rec.implemented || false,
-          createdAt: new Date(rec.created_at || new Date()),
           metadata: { ...rec.metadata, focus_area: 'readability' }
         };
         
-        return await storage.createFileRecommendation(insertRec);
+        const dbRec = await storage.createFileRecommendation(insertRec);
+        return mapToFileRecommendation(dbRec);
       })
     );
     

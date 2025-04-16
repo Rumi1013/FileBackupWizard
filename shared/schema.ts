@@ -297,6 +297,7 @@ export interface FileOrganizationRules {
   };
 }
 
+// This interface is used by the frontend UI components
 export interface FileRecommendation {
   id: string;
   file_id: string;
@@ -306,6 +307,20 @@ export interface FileRecommendation {
   created_at: string;
   implemented: boolean;
   metadata?: Record<string, any>;
+}
+
+// Utility function to convert from database type to frontend interface
+export function mapToFileRecommendation(rec: FileRecommendationType): FileRecommendation {
+  return {
+    id: rec.id,
+    file_id: rec.fileId,
+    recommendation_type: rec.recommendationType as 'quality_improvement' | 'monetization' | 'organization' | 'deletion',
+    recommendation_text: rec.recommendationText,
+    priority: rec.priority as 'high' | 'medium' | 'low',
+    created_at: rec.createdAt.toISOString(),
+    implemented: rec.implemented,
+    metadata: rec.metadata as Record<string, any>
+  };
 }
 
 export interface RecommendationCategory {
