@@ -28,8 +28,35 @@ export async function generateRecommendationsForFile(filePath: string): Promise<
     // Get file content
     const fileContent = await fs.readFile(filePath, 'utf-8');
     
-    // Get file assessment to get metrics
-    const fileAssessment = await storage.assessFile(filePath);
+    // Get file assessment to get metrics with fallback
+    let fileMetrics = {};
+    try {
+      const fileAssessment = await storage.assessFile(filePath);
+      fileMetrics = fileAssessment.metadata || {};
+    } catch (assessmentError) {
+      console.warn(`Could not get file assessment, using default metrics: ${assessmentError}`);
+      
+      // Provide fallback metrics based on file type
+      const ext = path.extname(filePath).toLowerCase();
+      
+      if (['.md', '.txt', '.doc', '.docx', '.pdf'].includes(ext)) {
+        fileMetrics = {
+          documentQuality: {
+            readability: 0.7,
+            formatting: 0.7,
+            completeness: 0.7
+          }
+        };
+      } else if (['.js', '.ts', '.jsx', '.tsx', '.py'].includes(ext)) {
+        fileMetrics = {
+          codeQuality: {
+            lintingScore: 0.7,
+            complexity: 0.7,
+            documentation: 0.7
+          }
+        };
+      }
+    }
     
     // Get file organization rules
     const organizationRules = {
@@ -56,7 +83,7 @@ export async function generateRecommendationsForFile(filePath: string): Promise<
     const openaiRecommendations = await openaiService.generateFileRecommendations(
       filePath,
       fileContent,
-      fileAssessment.metrics || {},
+      fileMetrics as QualityMetrics,
       organizationRules
     );
     
@@ -149,42 +176,88 @@ export async function generateDirectoryRecommendations(dirPath: string): Promise
       throw new Error(`Not a directory: ${dirPath}`);
     }
     
-    // Scan directory to get file list
-    const files = await fs.readdir(dirPath);
+    // Normalize path to handle relative paths better
+    const normalizedPath = path.resolve(dirPath);
+    console.log(`Analyzing directory: ${normalizedPath}`);
     
-    // Count file types
-    const fileTypes: Record<string, number> = {};
-    for (const file of files) {
-      const ext = path.extname(file).toLowerCase();
-      fileTypes[ext] = (fileTypes[ext] || 0) + 1;
-    }
-    
-    // Generate directory recommendations
-    const dirRecommendations = await openaiService.generateDirectoryRecommendations(
-      dirPath,
-      files,
-      fileTypes
-    );
-    
-    // Store recommendations in the database
-    const storedRecommendations = await Promise.all(
-      dirRecommendations.map(async (rec) => {
-        const insertRec: InsertFileRecommendationType = {
-          id: rec.id || uuidv4(),
-          fileId: rec.file_id || dirPath,
-          recommendationType: 'organization',
-          recommendationText: rec.recommendation_text,
-          priority: rec.priority,
-          implemented: rec.implemented || false,
-          createdAt: new Date(rec.created_at || new Date()),
-          metadata: { ...rec.metadata, focus_area: 'directory_structure' }
-        };
+    try {
+      // Scan directory to get file list
+      const files = await fs.readdir(normalizedPath);
+      
+      // Count file types
+      const fileTypes: Record<string, number> = {};
+      for (const file of files) {
+        const ext = path.extname(file).toLowerCase();
+        fileTypes[ext] = (fileTypes[ext] || 0) + 1;
+      }
+      console.log(`File types in directory: ${JSON.stringify(fileTypes)}`);
+      
+      // Generate directory recommendations
+      const dirRecommendations = await openaiService.generateDirectoryRecommendations(
+        normalizedPath,
+        files,
+        fileTypes
+      );
+      
+      // If no recommendations were generated, create a fallback recommendation
+      if (!dirRecommendations || dirRecommendations.length === 0) {
+        console.log("OpenAI didn't return any recommendations, using fallback");
+        const timestamp = new Date().toISOString();
+        const fallbackRecs = [{
+          id: uuidv4(),
+          file_id: normalizedPath,
+          recommendation_type: 'organization',
+          recommendation_text: "Consider organizing files by type and function to improve navigation",
+          priority: 'medium',
+          created_at: timestamp,
+          implemented: false,
+          metadata: { source: 'fallback', focus_area: 'directory_structure' }
+        }];
         
-        return await storage.createFileRecommendation(insertRec);
-      })
-    );
-    
-    return storedRecommendations;
+        // Store fallback recommendation
+        const storedFallbackRecs = await Promise.all(
+          fallbackRecs.map(async (rec) => {
+            const insertRec: InsertFileRecommendationType = {
+              id: rec.id || uuidv4(),
+              fileId: rec.file_id || normalizedPath,
+              recommendationType: 'organization',
+              recommendationText: rec.recommendation_text,
+              priority: rec.priority,
+              implemented: rec.implemented || false,
+              createdAt: new Date(rec.created_at || new Date()),
+              metadata: { ...rec.metadata, focus_area: 'directory_structure' }
+            };
+            
+            return await storage.createFileRecommendation(insertRec);
+          })
+        );
+        
+        return storedFallbackRecs;
+      }
+      
+      // Store recommendations in the database
+      const storedRecommendations = await Promise.all(
+        dirRecommendations.map(async (rec) => {
+          const insertRec: InsertFileRecommendationType = {
+            id: rec.id || uuidv4(),
+            fileId: rec.file_id || normalizedPath,
+            recommendationType: 'organization',
+            recommendationText: rec.recommendation_text,
+            priority: rec.priority,
+            implemented: rec.implemented || false,
+            createdAt: new Date(rec.created_at || new Date()),
+            metadata: { ...rec.metadata, focus_area: 'directory_structure' }
+          };
+          
+          return await storage.createFileRecommendation(insertRec);
+        })
+      );
+      
+      return storedRecommendations;
+    } catch (fsError) {
+      console.error(`Error reading directory ${normalizedPath}:`, fsError);
+      throw new Error(`Failed to read directory contents: ${fsError.message}`);
+    }
   } catch (error) {
     console.error('Error generating directory recommendations:', error);
     throw error;
