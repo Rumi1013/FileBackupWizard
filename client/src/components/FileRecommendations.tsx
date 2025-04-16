@@ -217,14 +217,14 @@ export function FileRecommendations() {
   };
   
   // Filter recommendations by type
-  const filteredRecommendations = recommendations?.filter(rec => 
+  const filteredRecommendations = recommendations?.filter((rec: FileRecommendation) => 
     selectedTab === 'all' || rec.recommendation_type === selectedTab
   );
   
   // Get count by type
   const getCountByType = (type: RecommendationType | 'all') => {
     if (type === 'all') return recommendations?.length || 0;
-    return recommendations?.filter(rec => rec.recommendation_type === type).length || 0;
+    return recommendations?.filter((rec: FileRecommendation) => rec.recommendation_type === type).length || 0;
   };
   
   // Get priority color
@@ -384,7 +384,7 @@ export function FileRecommendations() {
             </div>
           ) : (
             <Accordion type="multiple" className="w-full">
-              {filteredRecommendations?.map((recommendation) => {
+              {filteredRecommendations?.map((recommendation: FileRecommendation) => {
                 const typeDetails = getTypeDetails(recommendation.recommendation_type);
                 return (
                   <AccordionItem 
