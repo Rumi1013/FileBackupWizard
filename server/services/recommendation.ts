@@ -98,7 +98,6 @@ export async function generateRecommendationsForFile(filePath: string): Promise<
           recommendationType: rec.recommendation_type,
           recommendationText: rec.recommendation_text,
           priority: rec.priority,
-          implemented: rec.implemented || false,
           metadata: rec.metadata || {}
         };
         
@@ -146,7 +145,6 @@ export async function generateReadabilityRecommendations(filePath: string): Prom
           recommendationType: 'quality_improvement',
           recommendationText: rec.recommendation_text,
           priority: rec.priority,
-          implemented: rec.implemented || false,
           metadata: { ...rec.metadata, focus_area: 'readability' }
         };
         
@@ -219,17 +217,15 @@ export async function generateDirectoryRecommendations(dirPath: string): Promise
         const storedFallbackRecs = await Promise.all(
           fallbackRecs.map(async (rec) => {
             const insertRec: InsertFileRecommendationType = {
-              id: rec.id || uuidv4(),
               fileId: rec.file_id || normalizedPath,
               recommendationType: 'organization',
               recommendationText: rec.recommendation_text,
               priority: rec.priority,
-              implemented: rec.implemented || false,
-              createdAt: new Date(rec.created_at || new Date()),
               metadata: { ...rec.metadata, focus_area: 'directory_structure' }
             };
             
-            return await storage.createFileRecommendation(insertRec);
+            const dbRec = await storage.createFileRecommendation(insertRec);
+            return mapToFileRecommendation(dbRec);
           })
         );
         
@@ -240,17 +236,15 @@ export async function generateDirectoryRecommendations(dirPath: string): Promise
       const storedRecommendations = await Promise.all(
         dirRecommendations.map(async (rec) => {
           const insertRec: InsertFileRecommendationType = {
-            id: rec.id || uuidv4(),
             fileId: rec.file_id || normalizedPath,
             recommendationType: 'organization',
             recommendationText: rec.recommendation_text,
             priority: rec.priority,
-            implemented: rec.implemented || false,
-            createdAt: new Date(rec.created_at || new Date()),
             metadata: { ...rec.metadata, focus_area: 'directory_structure' }
           };
           
-          return await storage.createFileRecommendation(insertRec);
+          const dbRec = await storage.createFileRecommendation(insertRec);
+          return mapToFileRecommendation(dbRec);
         })
       );
       
@@ -276,7 +270,8 @@ export async function markRecommendationImplemented(
   recommendationId: string, 
   implemented: boolean = true
 ): Promise<FileRecommendation> {
-  return await storage.markRecommendationImplemented(recommendationId, implemented);
+  const dbRec = await storage.markRecommendationImplemented(recommendationId, implemented);
+  return mapToFileRecommendation(dbRec);
 }
 
 /**
@@ -298,7 +293,8 @@ export async function addRecommendationFeedback(
  * @returns Array of recommendations for the file
  */
 export async function getFileRecommendations(fileId: string): Promise<FileRecommendation[]> {
-  return await storage.getFileRecommendations(fileId);
+  const dbRecs = await storage.getFileRecommendations(fileId);
+  return dbRecs.map(rec => mapToFileRecommendation(rec));
 }
 
 /**
@@ -308,5 +304,6 @@ export async function getFileRecommendations(fileId: string): Promise<FileRecomm
  * @returns Array of recommendations of the specified type
  */
 export async function getRecommendationsByType(type: string): Promise<FileRecommendation[]> {
-  return await storage.getRecommendationsByType(type);
+  const dbRecs = await storage.getRecommendationsByType(type);
+  return dbRecs.map(rec => mapToFileRecommendation(rec));
 }
