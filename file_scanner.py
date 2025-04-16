@@ -10,9 +10,57 @@ def scan_directory(dir_path):
             json.dump({"error": f"Directory not found: {dir_path}"}, sys.stdout)
             return
 
-        def create_entry(path):
+        # Use a set to keep track of visited paths to avoid symlink cycles
+        visited_paths = set()
+        
+        # Limit recursion depth to avoid infinite loops
+        MAX_DEPTH = 5
+        
+        def create_entry(path, depth=0):
+            if depth > MAX_DEPTH:
+                return {
+                    "name": path.name,
+                    "path": str(path),
+                    "type": "directory",
+                    "children": [],
+                    "max_depth_reached": True
+                }
+            
             try:
-                is_file = path.is_file()
+                # Resolve symbolic links to their real path
+                # Use stat() instead of is_file() for more reliable file type detection
+                path_str = str(path.resolve())
+                
+                # Check if we've already visited this path (symlink loop detection)
+                if path_str in visited_paths:
+                    return {
+                        "name": path.name,
+                        "path": str(path),
+                        "type": "symlink",
+                        "target": path_str,
+                        "cycle_detected": True
+                    }
+                
+                visited_paths.add(path_str)
+                
+                # Determine if it's a file or directory
+                try:
+                    stats = path.stat()
+                    is_file = path.is_file()
+                    is_dir = path.is_dir()
+                except (OSError, PermissionError):
+                    # If we can't stat the file, skip it
+                    return None
+                
+                # Skip system directories that often cause issues
+                if any(segment in str(path) for segment in ['/proc', '/sys', '/dev', '/run']):
+                    return {
+                        "name": path.name,
+                        "path": str(path),
+                        "type": "system_directory",
+                        "skipped": True
+                    }
+                
                 entry = {
                     "name": path.name,
                     "path": str(path),
@@ -21,20 +69,26 @@ def scan_directory(dir_path):
 
                 if is_file:
                     try:
-                        entry["size"] = path.stat().st_size
+                        entry["size"] = stats.st_size
                     except:
                         entry["size"] = 0
-                else:
+                elif is_dir:
                     try:
                         children = []
                         for child in path.iterdir():
-                            if not child.name.startswith('.'):  # Skip hidden files
-                                child_entry = create_entry(child)
+                            # Skip hidden files and special system files
+                            if (not child.name.startswith('.') and 
+                                child.name not in ['.git', 'node_modules', '__pycache__']):
+                                child_entry = create_entry(child, depth + 1)
                                 if child_entry:  # Only add if entry was created successfully
                                     children.append(child_entry)
                         entry["children"] = children
                     except PermissionError:
                         entry["children"] = []
+                        entry["permission_error"] = True
+                    except OSError as e:
+                        entry["children"] = []
+                        entry["error"] = str(e)
 
                 return entry
             except Exception as e:

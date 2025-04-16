@@ -758,50 +758,111 @@ export class DatabaseStorage implements IStorage {
 
   async scanDirectory(dirPath: string): Promise<DirectoryEntry> {
     try {
+      // Validate and sanitize the input path
+      const normalizedPath = path.normalize(dirPath);
+      
+      // Skip system directories entirely to prevent errors
+      if (normalizedPath.includes('/proc') || 
+          normalizedPath.includes('/sys') || 
+          normalizedPath.includes('/dev') || 
+          normalizedPath.includes('/run')) {
+        
+        await this.addLog({
+          level: 'warn',
+          message: `Skipping system directory: ${normalizedPath}`
+        });
+        
+        // Return a minimal directory structure for system directories
+        return {
+          name: path.basename(normalizedPath),
+          path: normalizedPath,
+          type: 'directory',
+          children: []
+        };
+      }
+      
       await this.addLog({
         level: 'info',
-        message: `Scanning directory: ${dirPath}`
+        message: `Scanning directory: ${normalizedPath}`
       });
 
       const execAsync = promisify(exec);
       const pythonScript = path.join(process.cwd(), 'file_scanner.py');
-      const normalizedPath = path.normalize(dirPath);
-
-      const { stdout, stderr } = await execAsync(`python ${pythonScript} --dir "${normalizedPath}"`);
-
-      if (stderr) {
-        await this.addLog({
-          level: 'error',
-          message: `Scanner error: ${stderr}`
-        });
-      }
-
-      let result;
+      
+      // Set timeout for the command to prevent hanging
+      const options = { timeout: 30000, maxBuffer: 1024 * 1024 * 10 }; // 10MB buffer
+      
       try {
-        result = JSON.parse(stdout);
-      } catch (e) {
+        const { stdout, stderr } = await execAsync(`python ${pythonScript} --dir "${normalizedPath}"`, options);
+
+        if (stderr) {
+          await this.addLog({
+            level: 'warn',
+            message: `Scanner warnings: ${stderr}`
+          });
+        }
+
+        let result;
+        try {
+          result = JSON.parse(stdout);
+        } catch (e) {
+          await this.addLog({
+            level: 'error',
+            message: `Failed to parse scanner output: ${e}`
+          });
+          throw new Error('Invalid scanner output');
+        }
+
+        if ('error' in result) {
+          await this.addLog({
+            level: 'error',
+            message: `Scan failed: ${result.error}`
+          });
+          
+          // Return a basic structure with the error instead of throwing
+          return {
+            name: path.basename(normalizedPath),
+            path: normalizedPath,
+            type: 'directory',
+            children: [],
+            error: result.error
+          };
+        }
+
+        return result;
+        
+      } catch (execError) {
+        // Handle command execution errors
         await this.addLog({
           level: 'error',
-          message: `Failed to parse scanner output: ${stdout}`
+          message: `Scanner execution error: ${execError}`
         });
-        throw new Error('Invalid scanner output');
+        
+        // Return a basic structure with the error instead of throwing
+        return {
+          name: path.basename(normalizedPath),
+          path: normalizedPath,
+          type: 'directory',
+          children: [],
+          error: `Scanner execution failed: ${execError}`
+        };
       }
-
-      if ('error' in result) {
-        await this.addLog({
-          level: 'error',
-          message: `Scan failed: ${result.error}`
-        });
-        throw new Error(result.error);
-      }
-
-      return result;
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      
       await this.addLog({
         level: 'error',
-        message: `Failed to scan directory: ${error}`
+        message: `Failed to scan directory: ${errorMsg}`
       });
-      throw error;
+      
+      // Return a basic structure with the error instead of throwing
+      return {
+        name: path.basename(dirPath),
+        path: dirPath,
+        type: 'directory',
+        children: [],
+        error: `Scan failed: ${errorMsg}`
+      };
     }
   }
 

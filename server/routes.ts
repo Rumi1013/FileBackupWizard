@@ -31,11 +31,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!dirPath) {
         return res.status(400).json({ error: 'Directory path is required' });
       }
+      
+      // Sanitize the path - restrict to user directories only
+      if (dirPath.includes('/proc') || 
+          dirPath.includes('/sys') || 
+          dirPath.includes('/dev') || 
+          dirPath.includes('/tmp') ||
+          dirPath.includes('/etc')) {
+        return res.status(403).json({ 
+          error: 'Access to system directories is restricted',
+          name: path.basename(dirPath),
+          path: dirPath,
+          type: 'directory',
+          children: [],
+          restricted: true
+        });
+      }
+      
       const result = await storage.scanDirectory(dirPath);
       res.json(result);
     } catch (error) {
-      console.error('Scan error:', error);
-      res.status(500).json({ error: `Failed to scan directory: ${error}` });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Scan error:', errorMessage);
+      
+      // Return a partial result with error info instead of a 500 status
+      res.json({ 
+        error: `Failed to scan directory: ${errorMessage}`,
+        name: path.basename(req.query.path as string || './'),
+        path: req.query.path as string || './',
+        type: 'directory',
+        children: [],
+        error_details: errorMessage
+      });
     }
   });
 
