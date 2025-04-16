@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { DirectoryTree } from "./DirectoryTree";
 import { LogViewer } from "./LogViewer";
 import { FileAssessment } from "./FileAssessment";
+import { ExternalServices } from "./ExternalServices";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -31,7 +32,11 @@ import {
   Clock,
   MoveRight,
   BarChart4,
-  BrainCircuit 
+  BrainCircuit,
+  Link,
+  CloudIcon,
+  DownloadCloud,
+  ExternalLink 
 } from "lucide-react";
 import type { DirectoryEntry, DailyReport, FileAssessment as FileAssessmentType } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";

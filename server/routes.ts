@@ -18,6 +18,26 @@ import multer from 'multer';
 import recommendationRoutes from './recommendation-routes';
 import previewRoutes from './preview-routes';
 
+// List of supported file types
+const VALID_FILE_TYPES = [
+  // Documents
+  '.txt', '.md', '.doc', '.docx', '.pdf', '.rtf', '.odt', '.tex',
+  // Images
+  '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp', '.tiff', '.tif',
+  // Spreadsheets and data
+  '.csv', '.xlsx', '.xls', '.json', '.xml', '.yaml', '.yml',
+  // Code and scripts
+  '.js', '.ts', '.jsx', '.tsx', '.py', '.html', '.css', '.scss', '.less', '.php', '.rb', '.go', '.java', '.c', '.cpp', '.h',
+  // Compressed files
+  '.zip', '.rar', '.7z', '.tar', '.gz',
+  // Audio
+  '.mp3', '.wav', '.ogg', '.flac', '.aac',
+  // Video
+  '.mp4', '.avi', '.mov', '.wmv', '.webm', '.mkv',
+  // Others
+  '.make', '.json', '.config', '.env', '.log'
+];
+
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: {
@@ -148,8 +168,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!storage.isValidFileType(req.file.originalname)) {
         return res.status(400).json({ 
-          error: 'Invalid file type. Supported types: txt, md, doc, docx, pdf, jpg, jpeg, png, gif, csv, xlsx, xls' 
+          error: 'Invalid file type',
+          supported_types: VALID_FILE_TYPES,
+          message: 'Please upload one of the supported file types'
         });
+      }
+
+      // Create directory if it doesn't exist yet
+      try {
+        await storage.createDirectory(path.join(process.cwd(), 'uploads', directory));
+      } catch (dirError) {
+        console.error('Error creating directory:', dirError);
+        // Continue anyway, the storage.uploadFile method will also try to create it
       }
 
       const result = await storage.uploadFile(req.file, directory);
@@ -157,10 +187,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error) {
       console.error('Upload error:', error);
-      if (error.message.includes('File too large')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('File too large')) {
         return res.status(413).json({ error: 'File size exceeds the 10MB limit' });
       }
-      res.status(500).json({ error: `Upload failed: ${error}` });
+      
+      res.status(500).json({ 
+        error: 'Upload failed', 
+        details: errorMessage,
+        suggestion: 'Please try uploading a smaller file or a different file type'
+      });
     }
   });
 
@@ -472,18 +509,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!dbStorage.isValidFileType(req.file.originalname)) {
         return res.status(400).json({ 
-          error: 'Invalid file type. Supported types: txt, md, doc, docx, pdf, jpg, jpeg, png, gif, csv, xlsx, xls' 
+          error: 'Invalid file type',
+          supported_types: VALID_FILE_TYPES,
+          message: 'Please upload one of the supported file types'
         });
+      }
+      
+      // Create directory if it doesn't exist yet
+      try {
+        await dbStorage.createDirectory(path.join(process.cwd(), 'uploads', directory));
+      } catch (dirError) {
+        console.error('Error creating directory:', dirError);
+        // Continue anyway, the storage.uploadFile method will also try to create it
       }
       
       const result = await dbStorage.uploadFile(req.file, directory);
       res.json(result);
     } catch (error) {
       console.error('MM Upload error:', error);
-      if (error.message && error.message.includes('File too large')) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('File too large')) {
         return res.status(413).json({ error: 'File size exceeds the 10MB limit' });
       }
-      res.status(500).json({ error: `MM Upload failed: ${error}` });
+      
+      res.status(500).json({ 
+        error: 'Upload failed', 
+        details: errorMessage,
+        suggestion: 'Please try uploading a smaller file or a different file type'
+      });
     }
   });
   

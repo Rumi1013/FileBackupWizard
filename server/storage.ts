@@ -58,9 +58,22 @@ export interface IStorage {
 }
 
 const VALID_FILE_TYPES = [
-  '.txt', '.md', '.doc', '.docx', '.pdf',
-  '.jpg', '.jpeg', '.png', '.gif',
-  '.csv', '.xlsx', '.xls'
+  // Documents
+  '.txt', '.md', '.doc', '.docx', '.pdf', '.rtf', '.odt', '.tex',
+  // Images
+  '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp', '.tiff', '.tif',
+  // Spreadsheets and data
+  '.csv', '.xlsx', '.xls', '.json', '.xml', '.yaml', '.yml',
+  // Code and scripts
+  '.js', '.ts', '.jsx', '.tsx', '.py', '.html', '.css', '.scss', '.less', '.php', '.rb', '.go', '.java', '.c', '.cpp', '.h',
+  // Compressed files
+  '.zip', '.rar', '.7z', '.tar', '.gz',
+  // Audio
+  '.mp3', '.wav', '.ogg', '.flac', '.aac',
+  // Video
+  '.mp4', '.avi', '.mov', '.wmv', '.webm', '.mkv',
+  // Others
+  '.make', '.json', '.config', '.env', '.log'
 ];
 
 const FILE_ORGANIZATION_RULES: FileOrganizationRules = {
