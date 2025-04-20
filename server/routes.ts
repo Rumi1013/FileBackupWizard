@@ -124,6 +124,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // New endpoint for batch scanning of multiple directories
+  app.post('/api/files/scan-batch', async (req, res) => {
+    try {
+      const { dirPaths } = req.body;
+      
+      if (!dirPaths || !Array.isArray(dirPaths) || dirPaths.length === 0) {
+        return res.status(400).json({
+          error: 'Invalid input: dirPaths must be a non-empty array of directory paths',
+          success: false
+        });
+      }
+      
+      // Log the batch scan request
+      console.log(`Batch scan request for ${dirPaths.length} directories`);
+      await storage.addLog({
+        level: 'info',
+        message: `Batch scan requested for ${dirPaths.length} directories`
+      });
+      
+      // Validate and filter out restricted directories
+      const restrictedDirs = ['/proc', '/sys', '/dev', '/tmp', '/etc', '/var/run', '/var/cache'];
+      const validatedPaths = dirPaths.map(dirPath => {
+        // Replace empty paths with workspace directory
+        if (!dirPath || dirPath === '/') {
+          return '/home/runner/workspace';
+        }
+        
+        // Mark restricted directories
+        if (restrictedDirs.some(dir => dirPath.includes(dir))) {
+          return { path: dirPath, restricted: true };
+        }
+        
+        return dirPath;
+      });
+      
+      // Filter out restricted directories and extract clean paths
+      const cleanPaths: string[] = [];
+      const skippedPaths: any[] = [];
+      
+      validatedPaths.forEach(item => {
+        if (typeof item === 'string') {
+          cleanPaths.push(item);
+        } else if (item.restricted) {
+          skippedPaths.push({
+            path: item.path,
+            reason: 'Access to system directories is restricted'
+          });
+        }
+      });
+      
+      // If we have no valid paths after filtering, return an error
+      if (cleanPaths.length === 0) {
+        return res.status(400).json({
+          error: 'No valid directory paths provided after filtering restricted directories',
+          skippedPaths,
+          success: false
+        });
+      }
+      
+      // Perform batch scan with validated paths
+      const results = await storage.scanMultipleDirectories(cleanPaths);
+      
+      // Prepare response with both results and skipped paths
+      const response = {
+        success: true,
+        scannedCount: Object.keys(results).length,
+        skippedCount: skippedPaths.length,
+        skippedPaths: skippedPaths.length > 0 ? skippedPaths : undefined,
+        results
+      };
+      
+      res.json(response);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Batch scan error:', errorMessage);
+      
+      await storage.addLog({
+        level: 'error',
+        message: `Batch scan failed: ${errorMessage}`
+      });
+      
+      res.status(500).json({
+        error: `Failed to perform batch scan: ${errorMessage}`,
+        success: false
+      });
+    }
+  });
 
   app.get('/api/operations', async (req, res) => {
     try {
