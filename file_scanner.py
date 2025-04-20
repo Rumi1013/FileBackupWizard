@@ -24,7 +24,10 @@ MAX_DEPTH = 3
 def is_excluded_path(path):
     """Check if path should be excluded from scanning"""
     path_str = str(path)
-    return any(excluded in path_str for excluded in EXCLUDED_DIRS)
+    path_parts = path_str.split(os.sep)
+    
+    # Check if any part of the path exactly matches an excluded directory
+    return any(excluded in path_parts for excluded in EXCLUDED_DIRS)
 
 def scan_directory(dir_path):
     try:
