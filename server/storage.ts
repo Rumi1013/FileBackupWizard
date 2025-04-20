@@ -393,6 +393,46 @@ export class MemStorage implements IStorage {
 
   private checkMonetizationEligibility(filePath: string, metrics: QualityMetrics): boolean {
     const ext = path.extname(filePath).toLowerCase();
+    const fileName = path.basename(filePath);
+    
+    // If it has Midnight Magnolia quality metrics, check those first
+    if (metrics.midnightMagnoliaQuality) {
+      // File is eligible if it has high monetization potential and good audience match
+      if (metrics.midnightMagnoliaQuality.monetizationPotential > 0.75 &&
+          metrics.midnightMagnoliaQuality.targetAudienceMatch > 0.6) {
+        return true;
+      }
+    }
+    
+    // Special case for MM-specific file extensions
+    if (['.mm-template', '.mm-workbook', '.mm-plan', '.mm-resource'].includes(ext) ||
+        fileName.toLowerCase().includes('midnight-magnolia') ||
+        fileName.toLowerCase().includes('mm-')) {
+      return true;
+    }
+
+    // Design files with high quality metrics
+    if (metrics.designQuality && 
+        (metrics.designQuality.resolution > 0.8 || metrics.designQuality.consistency > 0.8)) {
+      return true;
+    }
+    
+    // Ebooks that are well-formatted and have good metadata
+    if (metrics.ebookQuality && 
+        metrics.ebookQuality.formatting > 0.7 && 
+        metrics.ebookQuality.metadata > 0.8) {
+      return true;
+    }
+    
+    // Check document quality for certain file types
+    if (metrics.documentQuality && 
+        ['.pdf', '.docx', '.doc', '.odt'].includes(ext) && 
+        metrics.documentQuality.readability > 0.7 &&
+        metrics.documentQuality.completeness > 0.8) {
+      return true;
+    }
+    
+    // Fallback to original file organization rules
     return FILE_ORGANIZATION_RULES.monetizationCriteria.contentTypes.includes(ext);
   }
 
@@ -914,13 +954,168 @@ export const storage = new MemStorage();
  */
 export class DatabaseStorage implements IStorage {
   // Helper methods for file quality assessment
+  private evaluateTargetAudienceMatch(content: string): number {
+    // Midnight Magnolia's three target audiences: digital entrepreneurs, small business owners, 
+    // and "Through Our Eyes" (Black women and trauma survivors)
+    
+    // Digital Entrepreneurs keywords
+    const digitalEntrepreneurKeywords = [
+      'passive income', 'digital product', 'automation', 'entrepreneurship', 
+      'online business', 'digital marketing', 'sales funnel', 'monetization',
+      'digital strategy', 'side hustle', 'online income', 'business systems'
+    ];
+    
+    // Small Business Owners keywords
+    const smallBusinessKeywords = [
+      'small business', 'business owner', 'branding', 'brand identity', 
+      'implementation', 'business strategy', 'turnkey solution', 'startup',
+      'small team', 'solo entrepreneur', 'solopreneur', 'freelancer'
+    ];
+    
+    // Through Our Eyes audience keywords
+    const throughOurEyesKeywords = [
+      'black women', 'trauma', 'healing', 'expungement', 'abuse recovery',
+      'southern heritage', 'black experience', 'resilience', 'trauma survivor',
+      'healing journey', 'black-owned', 'women of color'
+    ];
+    
+    // Count keyword matches for each audience
+    const contentLower = content.toLowerCase();
+    const digitalEntrepreneurMatches = digitalEntrepreneurKeywords.filter(keyword => 
+      contentLower.includes(keyword.toLowerCase())).length;
+    
+    const smallBusinessMatches = smallBusinessKeywords.filter(keyword => 
+      contentLower.includes(keyword.toLowerCase())).length;
+      
+    const throughOurEyesMatches = throughOurEyesKeywords.filter(keyword => 
+      contentLower.includes(keyword.toLowerCase())).length;
+    
+    // Calculate match percentages
+    const totalDigitalKeywords = digitalEntrepreneurKeywords.length;
+    const totalSmallBusinessKeywords = smallBusinessKeywords.length;
+    const totalThroughOurEyesKeywords = throughOurEyesKeywords.length;
+    
+    const digitalMatchPercentage = digitalEntrepreneurMatches / totalDigitalKeywords;
+    const smallBusinessMatchPercentage = smallBusinessMatches / totalSmallBusinessKeywords;
+    const throughOurEyesMatchPercentage = throughOurEyesMatches / totalThroughOurEyesKeywords;
+    
+    // Return the highest match percentage as the overall audience match score
+    return Math.max(digitalMatchPercentage, smallBusinessMatchPercentage, throughOurEyesMatchPercentage);
+  }
+  
   private calculateOverallQuality(metrics: QualityMetrics): string {
-    // Implementation similar to MemStorage
-    return 'Good'; // Simple implementation for now
+    // Enhanced quality calculation logic with Midnight Magnolia specifics
+    if (metrics.midnightMagnoliaQuality) {
+      // For MM-specific files, prioritize monetization potential and business alignment
+      const mmScore = (
+        metrics.midnightMagnoliaQuality.monetizationPotential * 0.5 +
+        metrics.midnightMagnoliaQuality.businessAlignment * 0.3 +
+        metrics.midnightMagnoliaQuality.targetAudienceMatch * 0.2
+      );
+      
+      if (mmScore > 0.75) return 'Good';
+      if (mmScore > 0.5) return 'Moderate';
+      return 'Poor';
+    }
+    
+    // Document quality assessment
+    if (metrics.documentQuality) {
+      const docScore = (
+        metrics.documentQuality.readability * 0.4 +
+        metrics.documentQuality.formatting * 0.3 +
+        metrics.documentQuality.completeness * 0.3
+      );
+      
+      if (docScore > 0.7) return 'Good';
+      if (docScore > 0.5) return 'Moderate';
+      return 'Poor';
+    }
+    
+    // Code quality assessment
+    if (metrics.codeQuality) {
+      const codeScore = (
+        metrics.codeQuality.lintingScore * 0.3 +
+        metrics.codeQuality.complexity * 0.3 +
+        metrics.codeQuality.documentation * 0.4
+      );
+      
+      if (codeScore > 0.7) return 'Good';
+      if (codeScore > 0.5) return 'Moderate';
+      return 'Poor';
+    }
+    
+    // Design quality assessment
+    if (metrics.designQuality) {
+      const designScore = (
+        metrics.designQuality.resolution * 0.3 +
+        metrics.designQuality.consistency * 0.4 +
+        metrics.designQuality.organization * 0.3
+      );
+      
+      if (designScore > 0.7) return 'Good';
+      if (designScore > 0.5) return 'Moderate';
+      return 'Poor';
+    }
+    
+    // E-book quality assessment
+    if (metrics.ebookQuality) {
+      const ebookScore = (
+        metrics.ebookQuality.formatting * 0.4 +
+        metrics.ebookQuality.navigation * 0.3 +
+        metrics.ebookQuality.metadata * 0.3
+      );
+      
+      if (ebookScore > 0.7) return 'Good';
+      if (ebookScore > 0.5) return 'Moderate';
+      return 'Poor';
+    }
+    
+    // Default fallback
+    return 'Moderate';
   }
 
   private checkMonetizationEligibility(filePath: string, metrics: QualityMetrics): boolean {
     const ext = path.extname(filePath).toLowerCase();
+    const fileName = path.basename(filePath);
+    
+    // If it has Midnight Magnolia quality metrics, check those first
+    if (metrics.midnightMagnoliaQuality) {
+      // File is eligible if it has high monetization potential and good audience match
+      if (metrics.midnightMagnoliaQuality.monetizationPotential > 0.75 &&
+          metrics.midnightMagnoliaQuality.targetAudienceMatch > 0.6) {
+        return true;
+      }
+    }
+    
+    // Special case for MM-specific file extensions
+    if (['.mm-template', '.mm-workbook', '.mm-plan', '.mm-resource'].includes(ext) ||
+        fileName.toLowerCase().includes('midnight-magnolia') ||
+        fileName.toLowerCase().includes('mm-')) {
+      return true;
+    }
+
+    // Design files with high quality metrics
+    if (metrics.designQuality && 
+        (metrics.designQuality.resolution > 0.8 || metrics.designQuality.consistency > 0.8)) {
+      return true;
+    }
+    
+    // Ebooks that are well-formatted and have good metadata
+    if (metrics.ebookQuality && 
+        metrics.ebookQuality.formatting > 0.7 && 
+        metrics.ebookQuality.metadata > 0.8) {
+      return true;
+    }
+    
+    // Check document quality for certain file types
+    if (metrics.documentQuality && 
+        ['.pdf', '.docx', '.doc', '.odt'].includes(ext) && 
+        metrics.documentQuality.readability > 0.7 &&
+        metrics.documentQuality.completeness > 0.8) {
+      return true;
+    }
+    
+    // Fallback to original file organization rules
     return FILE_ORGANIZATION_RULES.monetizationCriteria.contentTypes.includes(ext);
   }
 
@@ -941,6 +1136,7 @@ export class DatabaseStorage implements IStorage {
   
   private async assessFileQuality(filePath: string): Promise<QualityMetrics> {
     const ext = path.extname(filePath).toLowerCase();
+    const fileName = path.basename(filePath);
     let content = "";
     try {
       content = await fs.readFile(filePath, 'utf-8');
@@ -961,7 +1157,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Document quality assessment
-    if (['.md', '.txt', '.doc', '.docx', '.pdf'].includes(ext)) {
+    if (['.md', '.txt', '.doc', '.docx', '.pdf', '.rtf', '.odt'].includes(ext)) {
       const readability = this.calculateReadabilityScore(content);
       metrics.documentQuality = {
         readability,
@@ -971,11 +1167,73 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Image quality assessment
-    if (['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
+    if (['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp', '.tiff', '.tif'].includes(ext)) {
       metrics.imageQuality = {
-        resolution: 1080, // Mock values
+        resolution: 0.85, // Normalized values (0-1)
         colorProfile: 'RGB',
         compression: 0.7
+      };
+    }
+    
+    // Design file quality assessment
+    if (['.sketch', '.xd', '.fig', '.psd', '.ai', '.indd', '.afdesign', '.afphoto'].includes(ext)) {
+      metrics.designQuality = {
+        resolution: 0.85,
+        consistency: 0.9,
+        organization: 0.8
+      };
+    }
+    
+    // E-book and publishing quality assessment
+    if (['.epub', '.mobi', '.azw', '.azw3', '.ibooks'].includes(ext)) {
+      metrics.ebookQuality = {
+        formatting: 0.85,
+        navigation: 0.9,
+        metadata: 0.8
+      };
+    }
+    
+    // Midnight Magnolia specific file assessment
+    if (['.mm-template', '.mm-workbook', '.mm-plan', '.mm-resource'].includes(ext) || 
+        fileName.toLowerCase().includes('midnight-magnolia') || 
+        fileName.toLowerCase().includes('mm-')) {
+      
+      // Try to determine if this is related to specific MM business lines
+      const isDigitalProduct = content.includes('digital product') || 
+                               content.includes('template') || 
+                               content.includes('workbook') ||
+                               content.includes('planner');
+                               
+      const isCreativeService = content.includes('service') || 
+                                content.includes('brand design') || 
+                                content.includes('automation') ||
+                                content.includes('consultation');
+                                
+      const isMembership = content.includes('membership') || 
+                           content.includes('subscription') || 
+                           content.includes('journal') ||
+                           content.includes('content');
+                           
+      const isProductLine = content.includes('product line') || 
+                            content.includes('print-on-demand') || 
+                            content.includes('pet accessories') ||
+                            content.includes('stationery') ||
+                            content.includes('art print');
+      
+      // Calculate a monetization score based on MM business lines
+      const monetizationScore = [
+        isDigitalProduct ? 0.9 : 0,
+        isCreativeService ? 0.85 : 0,
+        isMembership ? 0.8 : 0,
+        isProductLine ? 0.95 : 0
+      ].filter(score => score > 0).length > 0 
+        ? Math.max(isDigitalProduct ? 0.9 : 0, isCreativeService ? 0.85 : 0, isMembership ? 0.8 : 0, isProductLine ? 0.95 : 0) 
+        : 0.5;
+      
+      metrics.midnightMagnoliaQuality = {
+        monetizationPotential: monetizationScore,
+        businessAlignment: 0.85,
+        targetAudienceMatch: this.evaluateTargetAudienceMatch(content)
       };
     }
 
