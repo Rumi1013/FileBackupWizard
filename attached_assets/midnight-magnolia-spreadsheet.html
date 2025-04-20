@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Midnight Magnolia Implementation Plan</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background-color: #f9f9f9;
+    }
+    .spreadsheet-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      padding: 20px;
+      background-color: #0A192F;
+      color: #D4AF37;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      margin-right: 15px;
+    }
+    .title {
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .tabs {
+      display: flex;
+      background: #f1f1f1;
+      border-bottom: 1px solid #ddd;
+      overflow-x: auto;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-right: 1px solid #ddd;
+      background: #f8f8f8;
+      white-space: nowrap;
+    }
+    .tab.active {
+      background: white;
+      border-bottom: 2px solid #D4AF37;
+      font-weight: bold;
+    }
+    .tab-content {
+      display: none;
+      padding: 20px;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .sheet-title {
+      color: #0A192F;
+      border-bottom: 2px solid #D4AF37;
+      padding-bottom: 8px;
+      margin-top: 20px;
+      margin-bottom: 15px;
+    }
+    .section-title {
+      color: #0A3B4D;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      table-layout: fixed;
+    }
+    th {
+      background-color: #f2f2f2;
+      text-align: left;
+      font-weight: bold;
+      padding: 10px;
+      border: 1px solid #ddd;
+    }
+    td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      vertical-align: top;
+    }
+    .status-complete {
+      background-color: #e6f4ea;
+      color: #137333;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .status-not-started {
+      background-color: #f1f3f4;
+      color: #5f6368;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .status-in-progress {
+      background-color: #e8f0fe;
+      color: #1a73e8;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .priority-high {
+      background-color: #fce8e6;
+      color: #c5221f;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .priority-medium {
+      background-color: #fef7e0;
+      color: #e37400;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .priority-low {
+      background-color: #e8f0fe;
+      color: #1a73e8;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+    .footer {
+      padding: 20px;
+      text-align: center;
+      border-top: 1px solid #ddd;
+      color: #5f6368;
+      font-size: 0.9em;
+    }
+    .link-button {
+      display: inline-block;
+      background-color: #D4AF37;
+      color: #0A192F;
+      padding: 10px 20px;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+    .link-button:hover {
+      background-color: #c09f30;
+    }
+    @media print {
+      .tabs, .footer {
+        display: none;
+      }
+      .tab-content {
+        display: block !important;
+        page-break-after: always;
+      }
+      body, .spreadsheet-container {
+        background: white;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="spreadsheet-container">
+    <div class="header">
+      <div class="logo">MM</div>
+      <div class="title">Midnight Magnolia Implementation Plan</div>
+    </div>
+    
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(event, 'overview')">Project Overview</div>
+      <div class="tab" onclick="switchTab(event, 'timeline')">Implementation Timeline</div>
+      <div class="tab" onclick="switchTab(event, 'tech')">Tech Stack</div>
+      <div class="tab" onclick="switchTab(event, 'content')">Content Strategy</div>
+      <div class="tab" onclick="switchTab(event, 'financial')">Financial Goals</div>
+      <div class="tab" onclick="switchTab(event, 'action')">30-Day Action Plan</div>
+      <div class="tab" onclick="switchTab(event, 'products')">Product Roadmap</div>
+    </div>
+    
+    <!-- Project Overview Tab -->
+    <div id="overview" class="tab-content active">
+      <h2 class="sheet-title">PROJECT OVERVIEW</h2>
+      
+      <h3 class="section-title">Project Summary</h3>
+      <table>
+        <tr>
+          <th width="30%">Item</th>
+          <th width="70%">Details</th>
+        </tr>
+        <tr>
+          <td><strong>Project Name</strong></td>
+          <td>Midnight Magnolia Brand Development</td>
+        </tr>
+        <tr>
+          <td><strong>Owner</strong></td>
+          <td>Latisha Waters</td>
+        </tr>
+        <tr>
+          <td><strong>Start Date</strong></td>
+          <td>May 1, 2025</td>
+        </tr>
+        <tr>
+          <td><strong>Target Completion</strong></td>
+          <td>October 31, 2025</td>
+        </tr>
+        <tr>
+          <td><strong>Vision</strong></td>
+          <td>Digital-first creative brand transforming art, design, and strategy into sustainable income streams while honoring Southern heritage and Black women's resilience</td>
+        </tr>
+        <tr>
+          <td><strong>Monthly Revenue Goal</strong></td>
+          <td>$10,000 by Month 6</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Revenue Streams</h3>
+      <table>
+        <tr>
+          <th>Stream</th>
+          <th>Monthly Target</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td>Digital Products</td>
+          <td>$2,000-$3,000</td>
+          <td>Templates, workbooks, printables, digital planners</td>
+        </tr>
+        <tr>
+          <td>Creative Services</td>
+          <td>$1,500-$2,500</td>
+          <td>Web development, brand design, automation implementation</td>
+        </tr>
+        <tr>
+          <td>Membership & Content</td>
+          <td>$1,000-$2,000</td>
+          <td>Subscription-based premium content, astrology, journals</td>
+        </tr>
+        <tr>
+          <td>Product Lines</td>
+          <td>$3,000-$4,500</td>
+          <td>Print-on-demand, pet accessories, stationery, art prints</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Target Audiences</h3>
+      <table>
+        <tr>
+          <th>Audience</th>
+          <th>Description</th>
+          <th>Key Needs</th>
+        </tr>
+        <tr>
+          <td>Digital Entrepreneurs</td>
+          <td>Women and men, 25-45, college-educated</td>
+          <td>Passive income strategies, automation systems</td>
+        </tr>
+        <tr>
+          <td>Small Business Owners</td>
+          <td>Solo entrepreneurs to small teams</td>
+          <td>Turnkey branding solutions, implementation support</td>
+        </tr>
+        <tr>
+          <td>Through Our Eyes</td>
+          <td>Black women and trauma survivors</td>
+          <td>Healing resources, expungement workshops, abuse recovery</td>
+        </tr>
+      </table>
+    </div>
+    
+    <!-- Implementation Timeline Tab -->
+    <div id="timeline" class="tab-content">
+      <h2 class="sheet-title">IMPLEMENTATION TIMELINE</h2>
+      
+      <h3 class="section-title">Phase 1: Foundation (Month 1)</h3>
+      <table>
+        <tr>
+          <th width="40%">Task</th>
+          <th width="15%">Status</th>
+          <th width="15%">Owner</th>
+          <th width="15%">Due Date</th>
+          <th width="15%">Notes</th>
+        </tr>
+        <tr>
+          <td>Finalize brand guide with visual identity</td>
+          <td><span class="status-complete">Complete</span></td>
+          <td>Latisha</td>
+          <td>May 7, 2025</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Set up Wix website with core pages</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>May 14, 2025</td>
+          <td>Home, About, Services, Shop, Blog, Contact</td>
+        </tr>
+        <tr>
+          <td>Configure Shopify store with brand elements</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>May 14, 2025</td>
+          <td>Colors, fonts, product categories</td>
+        </tr>
+        <tr>
+          <td>Establish business operations (QuickBooks, Notion)</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>May 14, 2025</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Create Digital Entrepreneur's Starter Kit ($37)</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>May 21, 2025</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Create Brand Identity Workbook ($29)</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>May 23, 2025</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Create Automation Workflow Templates ($49)</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>May 25, 2025</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Create AI Prompt Library for Creators ($25)</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>May 27, 2025</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Create Passive Income Strategy Guide ($59)</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>May 30, 2025</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Set up analytics tracking</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>May 30, 2025</td>
+          <td>Google Analytics, Shopify tracking</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Phase 2: Growth (Months 2-3)</h3>
+      <table>
+        <tr>
+          <th width="40%">Task</th>
+          <th width="15%">Status</th>
+          <th width="15%">Owner</th>
+          <th width="15%">Due Date</th>
+          <th width="15%">Notes</th>
+        </tr>
+        <tr>
+          <td>Implement content marketing strategy</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>June 30, 2025</td>
+          <td>Social posts, blog content, email sequences</td>
+        </tr>
+        <tr>
+          <td>Develop 'Through Our Eyes' content</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>June 30, 2025</td>
+          <td>Expungement templates, abuse recovery guides</td>
+        </tr>
+        <tr>
+          <td>Launch first themed art collection</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>June 30, 2025</td>
+          <td>Southern Roots: A Digital Heritage Series</td>
+        </tr>
+        <tr>
+          <td>Begin offering consulting services</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>July 31, 2025</td>
+          <td>Web development, brand design packages</td>
+        </tr>
+        <tr>
+          <td>Develop membership platform</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>July 31, 2025</td>
+          <td>Basic ($7), Premium ($19), VIP ($49) tiers</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Phase 3: Scaling (Months 4-6)</h3>
+      <table>
+        <tr>
+          <th width="40%">Task</th>
+          <th width="15%">Status</th>
+          <th width="15%">Owner</th>
+          <th width="15%">Due Date</th>
+          <th width="15%">Notes</th>
+        </tr>
+        <tr>
+          <td>Launch 'Midnight Menagerie' pet line</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>August 31, 2025</td>
+          <td>Pet accessories, content for Black pet owners</td>
+        </tr>
+        <tr>
+          <td>Implement community engagement strategies</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>September 30, 2025</td>
+          <td>Virtual workshops, 'Spoonie' community</td>
+        </tr>
+        <tr>
+          <td>Implement advanced automation systems</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>October 31, 2025</td>
+          <td>Content scheduling, sales funnels</td>
+        </tr>
+        <tr>
+          <td>Create additional passive income streams</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td>Latisha</td>
+          <td>October 31, 2025</td>
+          <td>KDP books, affiliate marketing</td>
+        </tr>
+      </table>
+    </div>
+    
+    <!-- Tech Stack Tab -->
+    <div id="tech" class="tab-content">
+      <h2 class="sheet-title">TECH STACK IMPLEMENTATION</h2>
+      
+      <h3 class="section-title">Website Development (Wix)</h3>
+      <table>
+        <tr>
+          <th width="25%">Element</th>
+          <th width="45%">Specification</th>
+          <th width="15%">Status</th>
+          <th width="15%">Notes</th>
+        </tr>
+        <tr>
+          <td>Platform</td>
+          <td>Wix with custom code integration</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Color Scheme</td>
+          <td>Midnight Blue (#0A192F), Midnight Teal (#0A3B4D), Magnolia White (#FAF3E0), Rich Gold (#D4AF37), Sage Green (#A3B18A)</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Typography</td>
+          <td>Playfair Display (headers), Lora (body), Montserrat (accents)</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Hero Section</td>
+          <td>Animated elements (moon glow, silhouettes)</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Navigation</td>
+          <td>Responsive design, mobile-optimized</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">E-commerce Setup (Shopify)</h3>
+      <table>
+        <tr>
+          <th width="25%">Element</th>
+          <th width="45%">Specification</th>
+          <th width="15%">Status</th>
+          <th width="15%">Notes</th>
+        </tr>
+        <tr>
+          <td>Theme</td>
+          <td>Custom theme with brand colors and fonts</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Digital Downloads</td>
+          <td>Automatic delivery system</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Print-on-Demand</td>
+          <td>Integration for physical products</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Membership</td>
+          <td>Subscription tiers with recurring billing</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Content Management Tools</h3>
+      <table>
+        <tr>
+          <th width="25%">Tool</th>
+          <th width="45%">Purpose</th>
+          <th width="15%">Status</th>
+          <th width="15%">Notes</th>
+        </tr>
+        <tr>
+          <td>Notion</td>
+          <td>Business hub, content planning</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Adobe Creative Suite</td>
+          <td>Product design, graphics</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Buffer/Later</td>
+          <td>Social media scheduling</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>MailerLite</td>
+          <td>Email marketing</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>QuickBooks</td>
+          <td>Financial tracking</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td></td>
+        </tr>
+      </table>
+    </div>
+    
+    <!-- Content Strategy Tab -->
+    <div id="content" class="tab-content">
+      <h2 class="sheet-title">CONTENT STRATEGY</h2>
+      
+      <h3 class="section-title">Core Brand Narratives</h3>
+      <table>
+        <tr>
+          <th width="25%">Narrative</th>
+          <th width="35%">Description</th>
+          <th width="40%">Content Applications</th>
+        </tr>
+        <tr>
+          <td>Transformation Story</td>
+          <td>Personal journey through challenges to entrepreneurship</td>
+          <td>About page, blog posts, social media stories</td>
+        </tr>
+        <tr>
+          <td>Resilience & Strength</td>
+          <td>Like the magnolia tree that withstands storms</td>
+          <td>Product messaging, community content, visuals</td>
+        </tr>
+        <tr>
+          <td>Technology as Liberation</td>
+          <td>Digital tools creating pathways to freedom</td>
+          <td>Educational content, services, tutorials</td>
+        </tr>
+        <tr>
+          <td>Community & Collective Rise</td>
+          <td>Lifting others through knowledge sharing</td>
+          <td>Membership content, workshops, resources</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Content Themes</h3>
+      <table>
+        <tr>
+          <th width="25%">Theme</th>
+          <th width="40%">Topics</th>
+          <th width="35%">Platforms</th>
+        </tr>
+        <tr>
+          <td>Personal Transformation</td>
+          <td>Career transitions, health challenges, creative purpose</td>
+          <td>Blog, Instagram, Pinterest</td>
+        </tr>
+        <tr>
+          <td>Digital Entrepreneurship</td>
+          <td>Passive income, tech tools, automation</td>
+          <td>YouTube, LinkedIn, blog</td>
+        </tr>
+        <tr>
+          <td>Creative Expression</td>
+          <td>Design principles, brand development, visual storytelling</td>
+          <td>Instagram, Pinterest, portfolio</td>
+        </tr>
+        <tr>
+          <td>Financial Independence</td>
+          <td>Multiple revenue streams, wealth building</td>
+          <td>Blog, newsletter, workshops</td>
+        </tr>
+        <tr>
+          <td>Southern Heritage</td>
+          <td>Black women figures, cultural traditions, wisdom</td>
+          <td>Art collection, stories, social content</td>
+        </tr>
+      </table>
+
+      <h3 class="section-title">Content Calendar Automation</h3>
+      <h3 class="section-title">Content Calendar Automation</h3>
+      <table>
+        <tr>
+          <th width="25%">Process</th>
+          <th width="30%">Tools</th>
+          <th width="25%">Automation Steps</th>
+          <th width="20%">Time Saved</th>
+        </tr>
+        <tr>
+          <td>Content Ideation</td>
+          <td>Notion + ChatGPT/Claude</td>
+          <td>Monthly theme batching with AI-assisted prompts</td>
+          <td>3-4 hours/week</td>
+        </tr>
+        <tr>
+          <td>Content Creation</td>
+          <td>Canva + Ideogram</td>
+          <td>Template system with bulk image generation</td>
+          <td>5-6 hours/week</td>
+        </tr>
+        <tr>
+          <td>Content Scheduling</td>
+          <td>Buffer/Later + Zapier</td>
+          <td>Batch upload with auto-scheduling to optimal times</td>
+          <td>2-3 hours/week</td>
+        </tr>
+        <tr>
+          <td>Content Repurposing</td>
+          <td>Notion + Zapier</td>
+          <td>Automated reformatting for different platforms</td>
+          <td>4-5 hours/week</td>
+        </tr>
+        <tr>
+          <td>Performance Analysis</td>
+          <td>Google Sheets + Zapier</td>
+          <td>Automated metrics collection and dashboard updates</td>
+          <td>2-3 hours/week</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Inspiration Gallery Collections</h3>
+      <table>
+        <tr>
+          <th width="25%">Collection</th>
+          <th width="40%">Featured Figures</th>
+          <th width="35%">Content Format</th>
+        </tr>
+        <tr>
+          <td>Wisdom Keepers</td>
+          <td>Maya Angelou, Toni Morrison, Zora Neale Hurston, Alice Walker, Audre Lorde</td>
+          <td>Digital art, quotes, stories</td>
+        </tr>
+        <tr>
+          <td>Modern Visionaries</td>
+          <td>Michelle Obama, Stacey Abrams, Maxine Waters, Shonda Rhimes, Issa Rae</td>
+          <td>Interviews, case studies, inspiration</td>
+        </tr>
+        <tr>
+          <td>Creative Forces</td>
+          <td>Beyoncé, SZA, Janelle Monáe, Solange, Jill Scott, Erykah Badu</td>
+          <td>Playlists, visual aesthetics, mood boards</td>
+        </tr>
+        <tr>
+          <td>Wellness Pioneers</td>
+          <td>Tabitha Brown, Queen Afua, Dr. Joy Harden Bradford, Lauren Ash</td>
+          <td>Recipes, practices, guided content</td>
+        </tr>
+      </table>%">Content Format</th>
+        </tr>
+        <tr>
+          <td>Wisdom Keepers</td>
+          <td>Maya Angelou, Toni Morrison, Zora Neale Hurston, Alice Walker, Audre Lorde</td>
+          <td>Digital art, quotes, stories</td>
+        </tr>
+        <tr>
+          <td>Modern Visionaries</td>
+          <td>Michelle Obama, Stacey Abrams, Maxine Waters, Shonda Rhimes, Issa Rae</td>
+          <td>Interviews, case studies, inspiration</td>
+        </tr>
+        <tr>
+          <td>Creative Forces</td>
+          <td>Beyoncé, SZA, Janelle Monáe, Solange, Jill Scott, Erykah Badu</td>
+          <td>Playlists, visual aesthetics, mood boards</td>
+        </tr>
+        <tr>
+          <td>Wellness Pioneers</td>
+          <td>Tabitha Brown, Queen Afua, Dr. Joy Harden Bradford, Lauren Ash</td>
+          <td>Recipes, practices, guided content</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Inspiration Gallery Collections</h3>
+      <table>
+        <tr>
+          <th width="25%">Process</th>
+          <th width="30%">Tools</th>
+          <th width="25%">Automation Steps</th>
+          <th width="20%">Time Saved</th>
+        </tr>
+        <tr>
+          <td>Content Ideation</td>
+          <td>Notion + ChatGPT/Claude</td>
+          <td>Monthly theme batching with AI-assisted prompts</td>
+          <td>3-4 hours/week</td>
+        </tr>
+        <tr>
+          <td>Content Creation</td>
+          <td>Canva + Ideogram</td>
+          <td>Template system with bulk image generation</td>
+          <td>5-6 hours/week</td>
+        </tr>
+        <tr>
+          <td>Content Scheduling</td>
+          <td>Buffer/Later + Zapier</td>
+          <td>Batch upload with auto-scheduling to optimal times</td>
+          <td>2-3 hours/week</td>
+        </tr>
+        <tr>
+          <td>Content Repurposing</td>
+          <td>Notion + Zapier</td>
+          <td>Automated reformatting for different platforms</td>
+          <td>4-5 hours/week</td>
+        </tr>
+        <tr>
+          <td>Performance Analysis</td>
+          <td>Google Sheets + Zapier</td>
+          <td>Automated metrics collection and dashboard updates</td>
+          <td>2-3 hours/week</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Weekly Content Calendar Template</h3>
+      <table>
+        <tr>
+          <th width="15%">Day</th>
+          <th width="25%">Morning Focus</th>
+          <th width="25%">Afternoon Focus</th>
+          <th width="15%">Self-Care</th>
+          <th width="20%">KPIs</th>
+        </tr>
+        <tr>
+          <td>Monday</td>
+          <td>Planning & Strategy</td>
+          <td>Content Creation</td>
+          <td>Meditation</td>
+          <td>Weekly plan completed</td>
+        </tr>
+        <tr>
+          <td>Tuesday</td>
+          <td>Digital Product Work</td>
+          <td>Client Services</td>
+          <td>Walking</td>
+          <td>Product milestones met</td>
+        </tr>
+        <tr>
+          <td>Wednesday</td>
+          <td>Marketing Tasks</td>
+          <td>Team Collaboration</td>
+          <td>Reading</td>
+          <td>Engagement metrics</td>
+        </tr>
+        <tr>
+          <td>Thursday</td>
+          <td>Technical Development</td>
+          <td>Analytics Review</td>
+          <td>Art creation</td>
+          <td>Development goals</td>
+        </tr>
+        <tr>
+          <td>Friday</td>
+          <td>Client Communication</td>
+          <td>Admin & Finances</td>
+          <td>Nature time</td>
+          <td>Weekly revenue</td>
+        </tr>
+        <tr>
+          <td>Weekend</td>
+          <td>Reflection</td>
+          <td>Rest & Inspiration</td>
+          <td>Full rest day</td>
+          <td>N/A</td>
+        </tr>
+      </table>
+    </div>
+    
+    <!-- Financial Goals Tab -->
+    <div id="financial" class="tab-content">
+      <h2 class="sheet-title">FINANCIAL GOALS & METRICS</h2>
+      
+      <h3 class="section-title">Revenue Targets</h3>
+      <table>
+        <tr>
+          <th width="25%">Timeline</th>
+          <th width="25%">Revenue Goal</th>
+          <th width="25%">Focus</th>
+          <th width="25%">Key Milestones</th>
+        </tr>
+        <tr>
+          <td>Month 1</td>
+          <td>$5,000</td>
+          <td>Initial launch</td>
+          <td>Website live, 5 digital products</td>
+        </tr>
+        <tr>
+          <td>Month 3</td>
+          <td>$7,500</td>
+          <td>30% growth</td>
+          <td>Services, expanded offerings</td>
+        </tr>
+        <tr>
+          <td>Month 6</td>
+          <td>$10,000</td>
+          <td>Membership model</td>
+          <td>Multiple revenue streams</td>
+        </tr>
+        <tr>
+          <td>Year 1</td>
+          <td>$120,000+</td>
+          <td>Scaling</td>
+          <td>Automation, passive income dominance</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Quarterly Planning</h3>
+      <table>
+        <tr>
+          <th width="20%">Quarter</th>
+          <th width="25%">Strategic Focus</th>
+          <th width="25%">Revenue Goal</th>
+          <th width="30%">Key Projects</th>
+        </tr>
+        <tr>
+          <td>Q1</td>
+          <td>Brand Establishment</td>
+          <td>$15,000</td>
+          <td>Website launch; Initial 5 digital products</td>
+        </tr>
+        <tr>
+          <td>Q2</td>
+          <td>Audience Growth</td>
+          <td>$25,000</td>
+          <td>Marketing campaigns; Client acquisition</td>
+        </tr>
+        <tr>
+          <td>Q3</td>
+          <td>Product Expansion</td>
+          <td>$35,000</td>
+          <td>New digital offerings; Membership program</td>
+        </tr>
+        <tr>
+          <td>Q4</td>
+          <td>Passive Income Scaling</td>
+          <td>$50,000</td>
+          <td>Automation systems; Multiple revenue streams</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Success Metrics</h3>
+      <table>
+        <tr>
+          <th width="20%">Category</th>
+          <th width="30%">Metric</th>
+          <th width="25%">Target</th>
+          <th width="25%">Tracking Method</th>
+        </tr>
+        <tr>
+          <td>Audience</td>
+          <td>Social Media Followers</td>
+          <td>10,000+</td>
+          <td>Platform analytics</td>
+        </tr>
+        <tr>
+          <td>Audience</td>
+          <td>Email Subscribers</td>
+          <td>5,000+</td>
+          <td>Email platform dashboard</td>
+        </tr>
+        <tr>
+          <td>Audience</td>
+          <td>Website Traffic</td>
+          <td>15,000+ monthly</td>
+          <td>Google Analytics</td>
+        </tr>
+        <tr>
+          <td>Product</td>
+          <td>Conversion Rate</td>
+          <td>3%+</td>
+          <td>Shopify analytics</td>
+        </tr>
+        <tr>
+          <td>Product</td>
+          <td>Average Order Value</td>
+          <td>$45+</td>
+          <td>Shopify dashboard</td>
+        </tr>
+        <tr>
+          <td>Client</td>
+          <td>Retention Rate</td>
+          <td>80%+</td>
+          <td>CRM tracking</td>
+        </tr>
+        <tr>
+          <td>Financial</td>
+          <td>Profit Margin</td>
+          <td>60%+</td>
+          <td>QuickBooks reports</td>
+        </tr>
+        <tr>
+          <td>Financial</td>
+          <td>Passive Income Ratio</td>
+          <td>70%+</td>
+          <td>Revenue breakdown</td>
+        </tr>
+        <tr>
+          <td>Financial</td>
+          <td>Expense Efficiency</td>
+          <td>&lt;30% overhead</td>
+          <td>Financial tracking</td>
+        </tr>
+      </table>
+    </div>
+    
+    <!-- 30-Day Action Plan Tab -->
+    <div id="action" class="tab-content">
+      <h2 class="sheet-title">30-DAY ACTION PLAN</h2>
+      
+      <h3 class="section-title">Pomodoro Timing Strategy</h3>
+      <table>
+        <tr>
+          <th width="20%">Task Category</th>
+          <th width="20%">Pomodoro Duration</th>
+          <th width="20%">Break Duration</th>
+          <th width="40%">Best For</th>
+        </tr>
+        <tr>
+          <td>Deep Creative Work</td>
+          <td>45 minutes</td>
+          <td>15 minutes</td>
+          <td>Product development, design work, complex writing</td>
+        </tr>
+        <tr>
+          <td>Technical Tasks</td>
+          <td>25 minutes</td>
+          <td>5 minutes</td>
+          <td>Coding, website updates, technical troubleshooting</td>
+        </tr>
+        <tr>
+          <td>Admin & Planning</td>
+          <td>20 minutes</td>
+          <td>5 minutes</td>
+          <td>Emails, planning, scheduling, financial tasks</td>
+        </tr>
+        <tr>
+          <td>Content Creation</td>
+          <td>30 minutes</td>
+          <td>10 minutes</td>
+          <td>Social media content, blog posts, newsletters</td>
+        </tr>
+        <tr>
+          <td>Learning & Research</td>
+          <td>35 minutes</td>
+          <td>10 minutes</td>
+          <td>Skill development, competitor research, trend analysis</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Eisenhower Matrix for Task Prioritization</h3>
+      <table>
+        <tr>
+          <th width="15%">Category</th>
+          <th width="42.5%">Urgent + Important (DO)</th>
+          <th width="42.5%">Important, Not Urgent (SCHEDULE)</th>
+        </tr>
+        <tr>
+          <td>Tasks</td>
+          <td>
+            • Website launch<br>
+            • Digital product completion<br>
+            • Payment processing setup<br>
+            • Client deadlines<br>
+            • Technical emergencies
+          </td>
+          <td>
+            • Brand strategy development<br>
+            • Content creation<br>
+            • Learning technical skills<br>
+            • Product ideation<br>
+            • Self-care and wellness
+          </td>
+        </tr>
+        <tr>
+          <th></th>
+          <th>Urgent, Not Important (DELEGATE)</th>
+          <th>Not Urgent, Not Important (ELIMINATE)</th>
+        </tr>
+        <tr>
+          <td>Tasks</td>
+          <td>
+            • Routine social media posting<br>
+            • Administrative tasks<br>
+            • Email management<br>
+            • Basic customer service<br>
+            • Data entry and organization
+          </td>
+          <td>
+            • Excessive perfectionism<br>
+            • Distracting notifications<br>
+            • Unproductive meetings<br>
+            • Overthinking minor decisions<br>
+            • Comparison to competitors
+          </td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Week 1</h3>
+      <table>
+        <tr>
+          <th width="40%">Task</th>
+          <th width="15%">Status</th>
+          <th width="15%">Priority</th>
+          <th width="15%">Due Date</th>
+          <th width="15%">Notes</th>
+        </tr>
+        <tr>
+          <td>Complete Wix website setup with brand elements</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 7</td>
+          <td>Homepage, About, Services, Shop, Blog, Contact</td>
+        </tr>
+        <tr>
+          <td>Finalize first digital product designs</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 7</td>
+          <td>Templates, layouts, interactive elements</td>
+        </tr>
+        <tr>
+          <td>Set up social media profiles with consistent branding</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 5</td>
+          <td>Facebook, Instagram, LinkedIn, Pinterest</td>
+        </tr>
+        <tr>
+          <td>Create content calendar for first month</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 6</td>
+          <td>Blog posts, social content, email newsletters</td>
+        </tr>
+        <tr>
+          <td>Establish project management systems in Notion</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 4</td>
+          <td>Business dashboard, content planner, product tracker</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Week 2</h3>
+      <table>
+        <tr>
+          <th width="40%">Task</th>
+          <th width="15%">Status</th>
+          <th width="15%">Priority</th>
+          <th width="15%">Due Date</th>
+          <th width="15%">Notes</th>
+        </tr>
+        <tr>
+          <td>Launch Shopify store with initial 5 products</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 14</td>
+          <td>Product pages, descriptions, images</td>
+        </tr>
+        <tr>
+          <td>Develop email welcome sequence</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 12</td>
+          <td>5-7 emails introducing brand and offerings</td>
+        </tr>
+        <tr>
+          <td>Create and schedule first batch of social content</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 14</td>
+          <td>2 weeks of posts across platforms</td>
+        </tr>
+        <tr>
+          <td>Set up analytics tracking across platforms</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 10</td>
+          <td>Google Analytics, Shopify analytics, email tracking</td>
+        </tr>
+        <tr>
+          <td>Configure digital product delivery automation</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 14</td>
+          <td>Purchase confirmation, delivery, follow-up</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Week 3</h3>
+      <table>
+        <tr>
+          <th width="40%">Task</th>
+          <th width="15%">Status</th>
+          <th width="15%">Priority</th>
+          <th width="15%">Due Date</th>
+          <th width="15%">Notes</th>
+        </tr>
+        <tr>
+          <td>Begin outreach to potential clients for services</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 21</td>
+          <td>LinkedIn connections, warm introductions</td>
+        </tr>
+        <tr>
+          <td>Create first blog posts focused on brand story</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 18</td>
+          <td>Origin story, vision, transformation narrative</td>
+        </tr>
+        <tr>
+          <td>Develop 'Through Our Eyes' resource outline</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 21</td>
+          <td>Framework for resources and guides</td>
+        </tr>
+        <tr>
+          <td>Test and optimize sales funnels</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 19</td>
+          <td>User journey testing, conversion optimization</td>
+        </tr>
+        <tr>
+          <td>Record introduction videos for products</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-low">Low</span></td>
+          <td>Day 21</td>
+          <td>Short explainer videos for each product</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Week 4</h3>
+      <table>
+        <tr>
+          <th width="40%">Task</th>
+          <th width="15%">Status</th>
+          <th width="15%">Priority</th>
+          <th width="15%">Due Date</th>
+          <th width="15%">Notes</th>
+        </tr>
+        <tr>
+          <td>Analyze first month metrics and adjust strategy</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 28</td>
+          <td>Performance review, strategy refinement</td>
+        </tr>
+        <tr>
+          <td>Plan first virtual workshop or event</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 30</td>
+          <td>Topic selection, content outline, promotion plan</td>
+        </tr>
+        <tr>
+          <td>Expand product offerings based on initial feedback</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 30</td>
+          <td>New product ideas, improvements</td>
+        </tr>
+        <tr>
+          <td>Begin development of membership platform</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 28</td>
+          <td>Membership tiers, benefits, pricing</td>
+        </tr>
+        <tr>
+          <td>Implement first automated marketing sequence</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 26</td>
+          <td>Cart abandonment, product recommendations</td>
+        </tr>
+      </table>
+    </div>
+        <tr>
+          <td>Begin outreach to potential clients for services</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 21</td>
+          <td>LinkedIn connections, warm introductions</td>
+        </tr>
+        <tr>
+          <td>Create first blog posts focused on brand story</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 18</td>
+          <td>Origin story, vision, transformation narrative</td>
+        </tr>
+        <tr>
+          <td>Develop 'Through Our Eyes' resource outline</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 21</td>
+          <td>Framework for resources and guides</td>
+        </tr>
+        <tr>
+          <td>Test and optimize sales funnels</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 19</td>
+          <td>User journey testing, conversion optimization</td>
+        </tr>
+        <tr>
+          <td>Record introduction videos for products</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-low">Low</span></td>
+          <td>Day 21</td>
+          <td>Short explainer videos for each product</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Week 4</h3>
+      <table>
+        <tr>
+          <th width="40%">Task</th>
+          <th width="15%">Status</th>
+          <th width="15%">Priority</th>
+          <th width="15%">Due Date</th>
+          <th width="15%">Notes</th>
+        </tr>
+        <tr>
+          <td>Analyze first month metrics and adjust strategy</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 28</td>
+          <td>Performance review, strategy refinement</td>
+        </tr>
+        <tr>
+          <td>Plan first virtual workshop or event</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 30</td>
+          <td>Topic selection, content outline, promotion plan</td>
+        </tr>
+        <tr>
+          <td>Expand product offerings based on initial feedback</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 30</td>
+          <td>New product ideas, improvements</td>
+        </tr>
+        <tr>
+          <td>Begin development of membership platform</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 28</td>
+          <td>Membership tiers, benefits, pricing</td>
+        </tr>
+        <tr>
+          <td>Implement first automated marketing sequence</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 26</td>
+          <td>Cart abandonment, product recommendations</td>
+        </tr>
+      </table>
+    </div>Begin outreach to potential clients for services</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 21</td>
+          <td>LinkedIn connections, warm introductions</td>
+        </tr>
+        <tr>
+          <td>Create first blog posts focused on brand story</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 18</td>
+          <td>Origin story, vision, transformation narrative</td>
+        </tr>
+        <tr>
+          <td>Develop 'Through Our Eyes' resource outline</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 21</td>
+          <td>Framework for resources and guides</td>
+        </tr>
+        <tr>
+          <td>Test and optimize sales funnels</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 19</td>
+          <td>User journey testing, conversion optimization</td>
+        </tr>
+        <tr>
+          <td>Record introduction videos for products</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-low">Low</span></td>
+          <td>Day 21</td>
+          <td>Short explainer videos for each product</td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Week 4</h3>
+      <table>
+        <tr>
+          <th width="40%">Task</th>
+          <th width="15%">Status</th>
+          <th width="15%">Priority</th>
+          <th width="15%">Due Date</th>
+          <th width="15%">Notes</th>
+        </tr>
+        <tr>
+          <td>Analyze first month metrics and adjust strategy</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 28</td>
+          <td>Performance review, strategy refinement</td>
+        </tr>
+        <tr>
+          <td>Plan first virtual workshop or event</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 30</td>
+          <td>Topic selection, content outline, promotion plan</td>
+        </tr>
+        <tr>
+          <td>Expand product offerings based on initial feedback</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 30</td>
+          <td>New product ideas, improvements</td>
+        </tr>
+        <tr>
+          <td>Begin development of membership platform</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-medium">Medium</span></td>
+          <td>Day 28</td>
+          <td>Membership tiers, benefits, pricing</td>
+        </tr>
+        <tr>
+          <td>Implement first automated marketing sequence</td>
+          <td><span class="status-not-started">Not Started</span></td>
+          <td><span class="priority-high">High</span></td>
+          <td>Day 26</td>
+          <td>Cart abandonment, product recommendations</td>
+        </tr>
+      </table>
+    </div>
+    
+    <!-- Product Roadmap Tab -->
+    <div id="products" class="tab-content">
+      <h2 class="sheet-title">DIGITAL PRODUCT ROADMAP</h2>
+      
+      <h3 class="section-title">Initial Launch Products</h3>
+      <table>
+        <tr>
+          <th width="20%">Product</th>
+          <th width="10%">Price</th>
+          <th width="40%">Description</th>
+          <th width="15%">Launch Date</th>
+          <th width="15%">Status</th>
+        </tr>
+        <tr>
+          <td>Digital Entrepreneur's Starter Kit</td>
+          <td>$37</td>
+          <td>Business plan template, content calendar, financial tracker, brand guide template, automation checklist</td>
+          <td>May 31, 2025</td>
+          <td><span class="status-not-started">Not Started</span></td>
+        </tr>
+        <tr>
+          <td>Brand Identity Workbook</td>
+          <td>$29</td>
+          <td>Brand discovery questions, visual identity exercises, voice development worksheets, brand story framework</td>
+          <td>May 31, 2025</td>
+          <td><span class="status-not-started">Not Started</span></td>
+        </tr>
+        <tr>
+          <td>Automation Workflow Templates</td>
+          <td>$49</td>
+          <td>Content planning system, client management database, product development pipeline, financial dashboard</td>
+          <td>May 31, 2025</td>
+          <td><span class="status-not-started">Not Started</span></td>
+        </tr>
+        <tr>
+          <td>AI Prompt Library for Creators</td>
+          <td>$25</td>
+          <td>Content creation prompts, design assistance prompts, marketing copy prompts, product development prompts</td>
+          <td>May 31, 2025</td>
+          <td><span class="status-not-started">Not Started</span></td>
+        </tr>
+        <tr>
+          <td>Passive Income Strategy Guide</td>
+          <td>$59</td>
+          <td>Multiple streams framework, digital product creation guide, automation systems blueprint, marketing strategies</td>
+          <td>May 31, 2025</td>
+          <td><span class="status-not-started">Not Started</span></td>
+        </tr>
+      </table>
+      
+      <h3 class="section-title">Future Product Development (Months 2-6)</h3>
+      <table>
+        <tr>
+          <th width="20%">Product</th>
+          <th width="15%">Target Price</th>
+          <th width="35%">Description</th>
+          <th width="15%">Target Launch</th>
+          <th width="15%">Status</th>
+        </tr>
+        <tr>
+          <td>Through Our Eyes Resource Library</td>
+          <td>$79</td>
+          <td>Expungement guides, abuse recovery resources, trauma healing, community support</td>
+          <td>June 30, 2025</td>
+          <td><span class="status-in-progress">Planning</span></td>
+        </tr>
+        <tr>
+          <td>Southern Heritage Digital Art Collection</td>
+          <td>$45-$120</td>
+          <td>Digital art prints featuring influential Black women figures, Southern motifs</td>
+          <td>July 15, 2025</td>
+          <td><span class="status-in-progress">Concept</span></td>
+        </tr>
+        <tr>
+          <td>Automation Masterclass</td>
+          <td>$149</td>
+          <td>Video course on setting up business automation systems and workflows</td>
+          <td>August 30, 2025</td>
+          <td><span class="status-not-started">Idea</span></td>
+        </tr>
+        <tr>
+          <td>Membership Portal</td>
+          <td>$7-$49/mo</td>
+          <td>Tiered membership with exclusive content, resources, and community</td>
+          <td>September 15, 2025</td>
+          <td><span class="status-not-started">Idea</span></td>
+        </tr>
+        <tr>
+          <td>Midnight Menagerie Pet Accessories</td>
+          <td>$15-$45</td>
+          <td>Pet products with Southern Gothic aesthetic</td>
+          <td>August 31, 2025</td>
+          <td><span class="status-not-started">Idea</span></td>
+        </tr>
+        <tr>
+          <td>Astrology and Wellness Content Suite</td>
+          <td>$39</td>
+          <td>Personalized guides, journal prompts, wellness practices</td>
+          <td>October 15, 2025</td>
+          <td><span class="status-not-started">Idea</span></td>
+        </tr>
+      </table>
+    </div>
+    
+    <div class="footer">
+      <a href="https://docs.google.com/document/d/17r5Xi4wRYkEBa7KAhPbfK-TxSuhTyvd-Sses1LYikPM/edit?usp=sharing" class="link-button" target="_blank">View Full Implementation Document</a>
+      <p>This implementation plan was created for Latisha Waters, Midnight Magnolia/Rumi-Nations LLC</p>
+      <p>Contact: latisha@midnightmagnolia.com | (803) 387-2552</p>
+      <p>Address: 10070 Dorchester Rd, #51599, Summerville, SC 29485</p>
+      <p>Website: www.rumi-nations.shop</p>
+    </div>
+    
+    <script>
+      function switchTab(event, tabId) {
+        // Hide all tab contents
+        const tabContents = document.getElementsByClassName('tab-content');
+        for (let i = 0; i < tabContents.length; i++) {
+          tabContents[i].classList.remove('active');
+        }
+        
+        // Remove active class from all tabs
+        const tabs = document.getElementsByClassName('tab');
+        for (let i = 0; i < tabs.length; i++) {
+          tabs[i].classList.remove('active');
+        }
+        
+        // Show the selected tab content and mark the tab as active
+        document.getElementById(tabId).classList.add('active');
+        event.currentTarget.classList.add('active');
+      }
+    </script>
+  </body>
+</html>

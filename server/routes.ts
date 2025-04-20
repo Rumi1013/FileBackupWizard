@@ -24,19 +24,27 @@ const VALID_FILE_TYPES = [
   // Documents
   '.txt', '.md', '.doc', '.docx', '.pdf', '.rtf', '.odt', '.tex',
   // Images
-  '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp', '.tiff', '.tif',
+  '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp', '.tiff', '.tif', '.ai', '.psd', '.eps',
   // Spreadsheets and data
-  '.csv', '.xlsx', '.xls', '.json', '.xml', '.yaml', '.yml',
+  '.csv', '.xlsx', '.xls', '.json', '.xml', '.yaml', '.yml', '.numbers', '.ods',
   // Code and scripts
   '.js', '.ts', '.jsx', '.tsx', '.py', '.html', '.css', '.scss', '.less', '.php', '.rb', '.go', '.java', '.c', '.cpp', '.h',
   // Compressed files
   '.zip', '.rar', '.7z', '.tar', '.gz',
   // Audio
-  '.mp3', '.wav', '.ogg', '.flac', '.aac',
+  '.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a',
   // Video
   '.mp4', '.avi', '.mov', '.wmv', '.webm', '.mkv',
+  // Design and creative files
+  '.sketch', '.xd', '.fig', '.indd', '.ae', '.prproj', '.aep', '.afdesign', '.afphoto',
+  // eBook and publishing
+  '.epub', '.mobi', '.azw', '.azw3', '.ibooks',
+  // Presentation files
+  '.ppt', '.pptx', '.key', '.odp',
+  // Midnight Magnolia specific
+  '.mm-template', '.mm-workbook', '.mm-plan', '.mm-resource',
   // Others
-  '.make', '.json', '.config', '.env', '.log'
+  '.make', '.json', '.config', '.env', '.log', '.note'
 ];
 
 const upload = multer({ 

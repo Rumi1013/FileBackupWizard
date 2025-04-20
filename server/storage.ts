@@ -62,19 +62,27 @@ const VALID_FILE_TYPES = [
   // Documents
   '.txt', '.md', '.doc', '.docx', '.pdf', '.rtf', '.odt', '.tex',
   // Images
-  '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp', '.tiff', '.tif',
+  '.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp', '.tiff', '.tif', '.ai', '.psd', '.eps',
   // Spreadsheets and data
-  '.csv', '.xlsx', '.xls', '.json', '.xml', '.yaml', '.yml',
+  '.csv', '.xlsx', '.xls', '.json', '.xml', '.yaml', '.yml', '.numbers', '.ods',
   // Code and scripts
   '.js', '.ts', '.jsx', '.tsx', '.py', '.html', '.css', '.scss', '.less', '.php', '.rb', '.go', '.java', '.c', '.cpp', '.h',
   // Compressed files
   '.zip', '.rar', '.7z', '.tar', '.gz',
   // Audio
-  '.mp3', '.wav', '.ogg', '.flac', '.aac',
+  '.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a',
   // Video
   '.mp4', '.avi', '.mov', '.wmv', '.webm', '.mkv',
+  // Design and creative files
+  '.sketch', '.xd', '.fig', '.indd', '.ae', '.prproj', '.aep', '.afdesign', '.afphoto',
+  // eBook and publishing
+  '.epub', '.mobi', '.azw', '.azw3', '.ibooks',
+  // Presentation files
+  '.ppt', '.pptx', '.key', '.odp',
+  // Midnight Magnolia specific
+  '.mm-template', '.mm-workbook', '.mm-plan', '.mm-resource',
   // Others
-  '.make', '.json', '.config', '.env', '.log'
+  '.make', '.json', '.config', '.env', '.log', '.note'
 ];
 
 const FILE_ORGANIZATION_RULES: FileOrganizationRules = {
@@ -134,6 +142,7 @@ export class MemStorage implements IStorage {
     const ext = path.extname(filePath).toLowerCase();
     const content = await fs.readFile(filePath, 'utf-8');
     const stats = await fs.stat(filePath);
+    const fileName = path.basename(filePath);
 
     let metrics: QualityMetrics = {};
 
@@ -147,7 +156,7 @@ export class MemStorage implements IStorage {
     }
 
     // Document quality assessment
-    if (['.md', '.txt', '.doc', '.docx', '.pdf'].includes(ext)) {
+    if (['.md', '.txt', '.doc', '.docx', '.pdf', '.rtf', '.odt'].includes(ext)) {
       const readabilityString = this.calculateReadabilityScore(content);
       let readabilityScore = 0.5; // default value
       
@@ -160,6 +169,68 @@ export class MemStorage implements IStorage {
         readability: readabilityScore,
         formatting: 0.8,
         completeness: 0.7
+      };
+    }
+    
+    // Design file quality assessment
+    if (['.sketch', '.xd', '.fig', '.psd', '.ai', '.indd', '.afdesign', '.afphoto'].includes(ext)) {
+      metrics.designQuality = {
+        resolution: 0.85,
+        consistency: 0.9,
+        organization: 0.8
+      };
+    }
+    
+    // E-book and publishing quality assessment
+    if (['.epub', '.mobi', '.azw', '.azw3', '.ibooks'].includes(ext)) {
+      metrics.ebookQuality = {
+        formatting: 0.85,
+        navigation: 0.9,
+        metadata: 0.8
+      };
+    }
+    
+    // Midnight Magnolia specific file assessment
+    if (['.mm-template', '.mm-workbook', '.mm-plan', '.mm-resource'].includes(ext) || 
+        fileName.toLowerCase().includes('midnight-magnolia') || 
+        fileName.toLowerCase().includes('mm-')) {
+      
+      // Try to determine if this is related to specific MM business lines
+      const isDigitalProduct = content.includes('digital product') || 
+                               content.includes('template') || 
+                               content.includes('workbook') ||
+                               content.includes('planner');
+                               
+      const isCreativeService = content.includes('service') || 
+                                content.includes('brand design') || 
+                                content.includes('automation') ||
+                                content.includes('consultation');
+                                
+      const isMembership = content.includes('membership') || 
+                           content.includes('subscription') || 
+                           content.includes('journal') ||
+                           content.includes('content');
+                           
+      const isProductLine = content.includes('product line') || 
+                            content.includes('print-on-demand') || 
+                            content.includes('pet accessories') ||
+                            content.includes('stationery') ||
+                            content.includes('art print');
+      
+      // Calculate a monetization score based on MM business lines
+      const monetizationScore = [
+        isDigitalProduct ? 0.9 : 0,
+        isCreativeService ? 0.85 : 0,
+        isMembership ? 0.8 : 0,
+        isProductLine ? 0.95 : 0
+      ].filter(score => score > 0).length > 0 
+        ? Math.max(isDigitalProduct ? 0.9 : 0, isCreativeService ? 0.85 : 0, isMembership ? 0.8 : 0, isProductLine ? 0.95 : 0) 
+        : 0.5;
+      
+      metrics.midnightMagnoliaQuality = {
+        monetizationPotential: monetizationScore,
+        businessAlignment: 0.85,
+        targetAudienceMatch: this.evaluateTargetAudienceMatch(content)
       };
     }
 
