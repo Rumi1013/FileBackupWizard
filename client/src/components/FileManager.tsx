@@ -4,6 +4,7 @@ import { DirectoryTree } from "./DirectoryTree";
 import { LogViewer } from "./LogViewer";
 import { FileAssessment } from "./FileAssessment";
 import { ExternalServices } from "./ExternalServices";
+import StorageSelector from "./StorageSelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -48,6 +49,7 @@ export function FileManager() {
   const [organizationView, setOrganizationView] = useState<'all' | 'high-quality' | 'monetizable' | 'delete-candidates'>('all');
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [selectedDirectories, setSelectedDirectories] = useState<Set<string>>(new Set());
+  const [storageProvider, setStorageProvider] = useState<'local' | 'dropbox' | 'google-drive' | 'mm-storage' | 'custom'>('local');
   const { toast } = useToast();
 
   // Query for directory data
@@ -231,6 +233,23 @@ export function FileManager() {
   // Go to root directory
   const goToRoot = () => {
     setCurrentPath("/");
+  };
+  
+  // Handle storage selection
+  const handleStorageSelect = (path: string, provider: 'local' | 'dropbox' | 'google-drive' | 'mm-storage' | 'custom') => {
+    setCurrentPath(path);
+    setStorageProvider(provider);
+    
+    // You could add additional logic here based on the storage provider
+    // For example, setting up authentication or showing provider-specific options
+    
+    if (provider !== 'local' && provider !== 'mm-storage') {
+      toast({
+        title: "External Storage",
+        description: `${provider === 'dropbox' ? 'Dropbox' : 'Google Drive'} connection will be available in the next update.`,
+        variant: "default",
+      });
+    }
   };
 
   // Handle creation of a new folder
@@ -491,6 +510,12 @@ export function FileManager() {
               </Breadcrumb>
             </div>
 
+            {/* Storage Selector */}
+            <StorageSelector
+              onStorageSelect={handleStorageSelect}
+              currentPath={currentPath}
+            />
+              
             {/* Path Input and Actions */}
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
