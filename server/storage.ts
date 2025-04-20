@@ -38,6 +38,7 @@ export interface IStorage {
   addLog(log: InsertLog): Promise<Log>;
   getLogs(): Promise<Log[]>;
   scanDirectory(dirPath: string): Promise<DirectoryEntry>;
+  scanMultipleDirectories(dirPaths: string[]): Promise<{ [key: string]: DirectoryEntry }>;
   assessFile(filePath: string): Promise<FileAssessment>;
   generateDailyReport(): Promise<DailyReport>;
   uploadFile(file: { buffer: Buffer; originalname: string }, directory: string): Promise<FileOperation>;
@@ -367,6 +368,70 @@ export class MemStorage implements IStorage {
       await this.addLog({
         level: 'error',
         message: `Failed to scan directory: ${error}`
+      });
+      throw error;
+    }
+  }
+  
+  async scanMultipleDirectories(dirPaths: string[]): Promise<{ [key: string]: DirectoryEntry }> {
+    try {
+      if (!dirPaths || !Array.isArray(dirPaths) || dirPaths.length === 0) {
+        throw new Error('No directory paths provided or invalid format');
+      }
+      
+      await this.addLog({
+        level: 'info',
+        message: `Starting batch scan of ${dirPaths.length} directories`
+      });
+
+      // Process each directory in parallel
+      const scanPromises = dirPaths.map(async (dirPath) => {
+        try {
+          const result = await this.scanDirectory(dirPath);
+          return { dirPath, result, success: true };
+        } catch (error) {
+          // Log individual errors but don't fail the entire operation
+          await this.addLog({
+            level: 'error',
+            message: `Error scanning directory ${dirPath}: ${error}`
+          });
+          
+          return { 
+            dirPath, 
+            result: {
+              name: path.basename(dirPath),
+              path: dirPath,
+              type: 'directory',
+              children: [],
+              error: String(error)
+            }, 
+            success: false 
+          };
+        }
+      });
+      
+      const results = await Promise.all(scanPromises);
+      
+      // Convert array of results to an object with dirPath as key
+      const resultMap: { [key: string]: DirectoryEntry } = {};
+      results.forEach(({ dirPath, result }) => {
+        resultMap[dirPath] = result;
+      });
+      
+      // Log completion
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.length - successCount;
+      
+      await this.addLog({
+        level: 'info',
+        message: `Batch scan completed: ${successCount} successful, ${failCount} failed`
+      });
+      
+      return resultMap;
+    } catch (error) {
+      await this.addLog({
+        level: 'error',
+        message: `Failed to scan multiple directories: ${error}`
       });
       throw error;
     }
