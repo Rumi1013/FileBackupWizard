@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,9 +7,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardIcon, FileIcon, ImageIcon, FileTextIcon, FileX2Icon, FileCodeIcon } from 'lucide-react';
+import { 
+  ClipboardIcon, 
+  FileIcon, 
+  ImageIcon, 
+  FileTextIcon, 
+  FileX2Icon, 
+  FileCodeIcon, 
+  LightbulbIcon, 
+  SparklesIcon,
+  RefreshCwIcon,
+  InfoIcon
+} from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 import type { FilePreview as FilePreviewType } from '@shared/schema';
 
 interface FilePreviewProps {
@@ -18,8 +32,10 @@ interface FilePreviewProps {
 }
 
 export function FilePreview({ filePath, fileId }: FilePreviewProps) {
+  const { toast } = useToast();
   const [previewType, setPreviewType] = useState<string>('text');
   const [path, setPath] = useState<string>(filePath || '');
+  const [showRecommendations, setShowRecommendations] = useState(false);
   
   // Query for file preview based on path or ID
   const { data, isLoading, isError, error, refetch } = useQuery<FilePreviewType>({
@@ -27,11 +43,42 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
     enabled: Boolean(fileId || path),
     refetchOnWindowFocus: false,
   });
+  
+  // Query for recommendations for this file
+  const { data: recommendations, isLoading: isLoadingRecommendations } = useQuery({
+    queryKey: ['/api/recommendations/file', encodeURIComponent(path)],
+    enabled: Boolean(path) && showRecommendations,
+    refetchOnWindowFocus: false,
+  });
+  
+  // Mutation to generate recommendations for a file
+  const generateRecommendationsMutation = useMutation({
+    mutationFn: async () => {
+      if (!path) return null;
+      return apiRequest('POST', '/api/recommendations/generate', { filePath: path });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Recommendations Generated",
+        description: "AI has analyzed your file and provided recommendations.",
+      });
+      setShowRecommendations(true);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error Generating Recommendations",
+        description: String(error),
+        variant: "destructive",
+      });
+    }
+  });
 
   // Handle form submission to preview a new file
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     refetch();
+    // Reset recommendations when loading a new file
+    setShowRecommendations(false);
   };
 
   // Helper to determine the language for syntax highlighting
@@ -236,21 +283,137 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
         )}
       </CardContent>
       {data && (
-        <CardFooter className="flex justify-between">
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            Refresh
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => {
-              navigator.clipboard.writeText(data.content);
-            }}
-          >
-            <ClipboardIcon className="h-4 w-4 mr-2" />
-            Copy Content
-          </Button>
-        </CardFooter>
+        <>
+          {/* Recommendations Section */}
+          {showRecommendations && recommendations && recommendations.length > 0 && (
+            <div className="px-6 pt-2 pb-6 border-t">
+              <div className="flex items-center gap-2 mb-3">
+                <LightbulbIcon className="h-5 w-5 text-amber-500" />
+                <h3 className="font-medium">Smart Recommendations</h3>
+              </div>
+              
+              <div className="space-y-3">
+                {recommendations.slice(0, 3).map((recommendation: any) => (
+                  <div 
+                    key={recommendation.id}
+                    className={`p-3 rounded-md text-sm relative border-l-4 ${
+                      recommendation.recommendation_type === 'quality_improvement' 
+                        ? 'border-blue-400 bg-blue-50/30' 
+                        : recommendation.recommendation_type === 'organization'
+                        ? 'border-purple-400 bg-purple-50/30'
+                        : recommendation.recommendation_type === 'monetization'
+                        ? 'border-green-400 bg-green-50/30'
+                        : 'border-red-400 bg-red-50/30'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start gap-2">
+                      <p>{recommendation.recommendation_text}</p>
+                      
+                      <div className="flex gap-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6"
+                                onClick={() => {
+                                  // Mark as implemented via API
+                                  fetch(`/api/recommendations/${recommendation.id}/implement`, {
+                                    method: 'PATCH',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({implemented: true})
+                                  });
+                                  
+                                  // Show success message
+                                  toast({
+                                    title: "Recommendation Applied",
+                                    description: "Marked as implemented.",
+                                  });
+                                }}
+                              >
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Mark as implemented</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {recommendations.length > 3 && (
+                  <div className="text-center">
+                    <Button variant="link" size="sm" onClick={() => window.open('/recommendations', '_blank')}>
+                      View all {recommendations.length} recommendations
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <CardFooter className="flex justify-between">
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => refetch()}>
+                <RefreshCwIcon className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant={isCodeFile(data.fileType) ? "default" : "outline"} 
+                      size="sm"
+                      onClick={() => {
+                        if (!showRecommendations) {
+                          generateRecommendationsMutation.mutate();
+                        } else {
+                          setShowRecommendations(false);
+                        }
+                      }}
+                      disabled={generateRecommendationsMutation.isPending}
+                    >
+                      {generateRecommendationsMutation.isPending ? (
+                        <>
+                          <SparklesIcon className="h-4 w-4 mr-2 animate-pulse" />
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <LightbulbIcon className="h-4 w-4 mr-2" />
+                          {showRecommendations ? "Hide Recommendations" : "Smart Recommendations"}
+                        </>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Get AI-powered suggestions for this file</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                navigator.clipboard.writeText(data.content);
+                toast({
+                  title: "Content Copied",
+                  description: "File content copied to clipboard.",
+                });
+              }}
+            >
+              <ClipboardIcon className="h-4 w-4 mr-2" />
+              Copy Content
+            </Button>
+          </CardFooter>
+        </>
       )}
     </Card>
   );
