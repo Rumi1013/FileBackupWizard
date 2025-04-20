@@ -46,6 +46,8 @@ export function FileManager() {
   const [currentPath, setCurrentPath] = useState("/");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [organizationView, setOrganizationView] = useState<'all' | 'high-quality' | 'monetizable' | 'delete-candidates'>('all');
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  const [selectedDirectories, setSelectedDirectories] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   // Query for directory data
@@ -162,6 +164,33 @@ export function FileManager() {
       });
     },
   });
+  
+  // Mutation for batch scanning directories
+  const batchScanMutation = useMutation({
+    mutationFn: async (dirPaths: string[]) => {
+      return apiRequest('POST', '/api/files/scan-batch', { dirPaths });
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Batch Scan Complete",
+        description: `Scanned ${data.scannedCount} directories successfully`,
+      });
+      
+      // Reset selected directories after scan
+      setSelectedDirectories(new Set());
+      setIsBatchMode(false);
+      
+      // Refresh the current view
+      refetch();
+    },
+    onError: (error) => {
+      toast({
+        title: "Batch Scan Error",
+        description: String(error),
+        variant: "destructive",
+      });
+    },
+  });
 
   // Mutation for analyzing a file
   const analyzeMutation = useMutation({
@@ -223,6 +252,32 @@ export function FileManager() {
   const handleAnalyzeFile = () => {
     if (selectedFile) {
       analyzeMutation.mutate(selectedFile);
+    }
+  };
+  
+  // Toggle batch mode for multi-directory selection
+  const toggleBatchMode = () => {
+    setIsBatchMode(!isBatchMode);
+    // Clear selections when toggling
+    if (isBatchMode) {
+      setSelectedDirectories(new Set());
+    }
+  };
+  
+  // Handle batch directory scanning
+  const handleBatchScan = () => {
+    if (selectedDirectories.size === 0) {
+      toast({
+        title: "No Directories Selected",
+        description: "Please select at least one directory for batch scanning",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const dirPaths = Array.from(selectedDirectories);
+    if (confirm(`Scan ${dirPaths.length} selected ${dirPaths.length === 1 ? 'directory' : 'directories'}?`)) {
+      batchScanMutation.mutate(dirPaths);
     }
   };
 
