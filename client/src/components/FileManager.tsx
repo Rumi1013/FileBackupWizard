@@ -492,28 +492,83 @@ export function FileManager() {
             </div>
 
             {/* Path Input and Actions */}
-            <div className="flex gap-2">
-              <Button 
-                variant="outline"
-                onClick={goToRoot}
-                className="min-w-[40px] px-3"
-                title="Go to Root Directory"
-              >
-                <Home className="h-4 w-4" />
-              </Button>
-              <Input
-                value={currentPath}
-                onChange={(e) => setCurrentPath(e.target.value)}
-                placeholder="Enter directory path"
-                className="flex-1"
-              />
-              <Button 
-                onClick={() => scanMutation.mutate()}
-                disabled={scanMutation.isPending}
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${scanMutation.isPending ? 'animate-spin' : ''}`} />
-                Scan
-              </Button>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline"
+                  onClick={goToRoot}
+                  className="min-w-[40px] px-3"
+                  title="Go to Root Directory"
+                >
+                  <Home className="h-4 w-4" />
+                </Button>
+                <Input
+                  value={currentPath}
+                  onChange={(e) => setCurrentPath(e.target.value)}
+                  placeholder="Enter directory path"
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={() => scanMutation.mutate()}
+                  disabled={scanMutation.isPending || batchScanMutation.isPending}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${scanMutation.isPending ? 'animate-spin' : ''}`} />
+                  Scan
+                </Button>
+              </div>
+              
+              {/* Batch Mode Controls */}
+              <div className="flex items-center justify-between gap-2 px-1">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={isBatchMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={toggleBatchMode}
+                    className="text-xs h-8"
+                    disabled={batchScanMutation.isPending}
+                  >
+                    {isBatchMode ? (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                        Exit Batch Mode
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                        Enable Batch Mode
+                      </>
+                    )}
+                  </Button>
+                  
+                  {isBatchMode && (
+                    <span className="text-xs text-muted-foreground">
+                      {selectedDirectories.size} {selectedDirectories.size === 1 ? 'directory' : 'directories'} selected
+                    </span>
+                  )}
+                </div>
+                
+                {isBatchMode && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleBatchScan}
+                    disabled={selectedDirectories.size === 0 || batchScanMutation.isPending}
+                    className="text-xs h-8"
+                  >
+                    {batchScanMutation.isPending ? (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                        Scan Selected Directories
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
@@ -687,6 +742,10 @@ export function FileManager() {
                       data={directoryData} 
                       onSelect={handleFileSelect}
                       currentPath={currentPath}
+                      multiSelect={isBatchMode}
+                      selectedDirs={selectedDirectories}
+                      onMultiSelectChange={setSelectedDirectories}
+                      isProcessingBatch={batchScanMutation.isPending}
                     />
                   </CardContent>
                 </Card>
@@ -724,6 +783,10 @@ export function FileManager() {
                         }} 
                         onSelect={handleFileSelect}
                         currentPath={currentPath}
+                        multiSelect={isBatchMode}
+                        selectedDirs={selectedDirectories}
+                        onMultiSelectChange={setSelectedDirectories}
+                        isProcessingBatch={batchScanMutation.isPending}
                       />
                     ) : (
                       <div className="text-center py-4 text-muted-foreground">
@@ -762,6 +825,10 @@ export function FileManager() {
                         }} 
                         onSelect={handleFileSelect}
                         currentPath={currentPath}
+                        multiSelect={isBatchMode}
+                        selectedDirs={selectedDirectories}
+                        onMultiSelectChange={setSelectedDirectories}
+                        isProcessingBatch={batchScanMutation.isPending}
                       />
                     ) : (
                       <div className="text-center py-4 text-muted-foreground">
@@ -801,6 +868,10 @@ export function FileManager() {
                         }} 
                         onSelect={handleFileSelect}
                         currentPath={currentPath}
+                        multiSelect={isBatchMode}
+                        selectedDirs={selectedDirectories}
+                        onMultiSelectChange={setSelectedDirectories}
+                        isProcessingBatch={batchScanMutation.isPending}
                       />
                     ) : (
                       <div className="text-center py-4 text-muted-foreground">
