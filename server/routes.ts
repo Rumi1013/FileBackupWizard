@@ -347,10 +347,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Batch organization error:', error);
       
       await storage.addLog({
-        timestamp: new Date().toISOString(),
         level: 'error',
-        message: `Batch organization failed: ${error}`,
-        source: 'file-organizer'
+        message: `Batch organization failed: ${error}`
       });
       
       res.status(500).json({ error: `Failed to apply batch organization: ${error}` });
@@ -404,10 +402,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Add log
       await storage.addLog({
-        timestamp: new Date().toISOString(),
         level: 'info',
-        message: `Quality filter applied: ${qualityLevel}${fileType ? ', type: ' + fileType : ''} - Found ${filteredFiles.length} files`,
-        source: 'quality-filter'
+        message: `Quality filter applied: ${qualityLevel}${fileType ? ', type: ' + fileType : ''} - Found ${filteredFiles.length} files`
       });
       
       res.json({
