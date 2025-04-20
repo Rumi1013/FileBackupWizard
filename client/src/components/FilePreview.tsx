@@ -7,7 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { ClipboardIcon, FileIcon, ImageIcon, FileTextIcon, FileX2Icon } from 'lucide-react';
+import { ClipboardIcon, FileIcon, ImageIcon, FileTextIcon, FileX2Icon, FileCodeIcon } from 'lucide-react';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import type { FilePreview as FilePreviewType } from '@shared/schema';
 
 interface FilePreviewProps {
@@ -32,22 +34,84 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
     refetch();
   };
 
+  // Helper to determine the language for syntax highlighting
+  const getLanguage = (fileType: string): string => {
+    const languageMap: Record<string, string> = {
+      '.js': 'javascript',
+      '.jsx': 'jsx',
+      '.ts': 'typescript',
+      '.tsx': 'tsx',
+      '.html': 'html',
+      '.css': 'css',
+      '.scss': 'scss',
+      '.less': 'less',
+      '.json': 'json',
+      '.md': 'markdown',
+      '.py': 'python',
+      '.rb': 'ruby',
+      '.java': 'java',
+      '.c': 'c',
+      '.cpp': 'cpp',
+      '.cs': 'csharp',
+      '.go': 'go',
+      '.php': 'php',
+      '.sh': 'bash',
+      '.sql': 'sql',
+      '.yaml': 'yaml',
+      '.yml': 'yaml',
+      '.xml': 'xml'
+    };
+    
+    return languageMap[fileType] || 'text';
+  };
+  
+  // Check if the file is a code file that should use syntax highlighting
+  const isCodeFile = (fileType: string): boolean => {
+    return [
+      '.js', '.jsx', '.ts', '.tsx', '.html', '.css', '.scss', '.less',
+      '.json', '.md', '.py', '.rb', '.java', '.c', '.cpp', '.cs',
+      '.go', '.php', '.sh', '.sql', '.yaml', '.yml', '.xml'
+    ].includes(fileType);
+  };
+
   // Determine content to display based on preview type and file type
   const renderPreviewContent = () => {
     if (!data) return null;
 
     switch (previewType) {
       case 'text':
-        return (
-          <ScrollArea className="h-[400px] w-full rounded border p-4 bg-muted/20 font-mono text-sm">
-            {data.truncated && (
-              <Badge variant="outline" className="mb-2 bg-yellow-500/10 text-yellow-600">
-                File truncated due to size
-              </Badge>
-            )}
-            <pre>{data.content}</pre>
-          </ScrollArea>
-        );
+        // Use syntax highlighting for code files
+        if (isCodeFile(data.fileType)) {
+          return (
+            <ScrollArea className="h-[400px] w-full rounded border bg-muted/20">
+              {data.truncated && (
+                <Badge variant="outline" className="mb-2 bg-yellow-500/10 text-yellow-600 absolute top-2 right-2 z-10">
+                  File truncated due to size
+                </Badge>
+              )}
+              <SyntaxHighlighter
+                language={getLanguage(data.fileType)}
+                style={oneDark}
+                customStyle={{ margin: 0, borderRadius: '4px', height: '100%' }}
+                wrapLongLines
+              >
+                {data.content}
+              </SyntaxHighlighter>
+            </ScrollArea>
+          );
+        } else {
+          // Regular text files without syntax highlighting
+          return (
+            <ScrollArea className="h-[400px] w-full rounded border p-4 bg-muted/20 font-mono text-sm">
+              {data.truncated && (
+                <Badge variant="outline" className="mb-2 bg-yellow-500/10 text-yellow-600">
+                  File truncated due to size
+                </Badge>
+              )}
+              <pre>{data.content}</pre>
+            </ScrollArea>
+          );
+        }
       case 'image':
         if (['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg'].includes(data.fileType)) {
           return (
@@ -83,7 +147,9 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
     
     if (['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg'].includes(data.fileType)) {
       return <ImageIcon className="h-5 w-5" />;
-    } else if (['.txt', '.md', '.js', '.ts', '.jsx', '.tsx', '.html', '.css', '.json', '.py'].includes(data.fileType)) {
+    } else if (isCodeFile(data.fileType)) {
+      return <FileCodeIcon className="h-5 w-5" />;
+    } else if (['.txt', '.md', '.doc', '.docx', '.pdf'].includes(data.fileType)) {
       return <FileTextIcon className="h-5 w-5" />;
     } else {
       return <FileIcon className="h-5 w-5" />;
