@@ -260,6 +260,21 @@ export interface QualityMetrics {
     bitrate: number;
     duration: number;
   };
+  designQuality?: {
+    resolution: number;
+    consistency: number;
+    organization: number;
+  };
+  ebookQuality?: {
+    formatting: number;
+    navigation: number;
+    metadata: number;
+  };
+  midnightMagnoliaQuality?: {
+    monetizationPotential: number;
+    businessAlignment: number;
+    targetAudienceMatch: number;
+  };
 }
 
 export interface ContentSuggestion {

@@ -271,9 +271,124 @@ export class MemStorage implements IStorage {
     }
   }
 
+  private evaluateTargetAudienceMatch(content: string): number {
+    // Midnight Magnolia's three target audiences: digital entrepreneurs, small business owners, 
+    // and "Through Our Eyes" (Black women and trauma survivors)
+    
+    // Digital Entrepreneurs keywords
+    const digitalEntrepreneurKeywords = [
+      'passive income', 'digital product', 'automation', 'entrepreneurship', 
+      'online business', 'digital marketing', 'sales funnel', 'monetization',
+      'digital strategy', 'side hustle', 'online income', 'business systems'
+    ];
+    
+    // Small Business Owners keywords
+    const smallBusinessKeywords = [
+      'small business', 'business owner', 'branding', 'brand identity', 
+      'implementation', 'business strategy', 'turnkey solution', 'startup',
+      'small team', 'solo entrepreneur', 'solopreneur', 'freelancer'
+    ];
+    
+    // Through Our Eyes audience keywords
+    const throughOurEyesKeywords = [
+      'black women', 'trauma', 'healing', 'expungement', 'abuse recovery',
+      'southern heritage', 'black experience', 'resilience', 'trauma survivor',
+      'healing journey', 'black-owned', 'women of color'
+    ];
+    
+    // Count keyword matches for each audience
+    const contentLower = content.toLowerCase();
+    const digitalEntrepreneurMatches = digitalEntrepreneurKeywords.filter(keyword => 
+      contentLower.includes(keyword.toLowerCase())).length;
+    
+    const smallBusinessMatches = smallBusinessKeywords.filter(keyword => 
+      contentLower.includes(keyword.toLowerCase())).length;
+      
+    const throughOurEyesMatches = throughOurEyesKeywords.filter(keyword => 
+      contentLower.includes(keyword.toLowerCase())).length;
+    
+    // Calculate match percentages
+    const totalDigitalKeywords = digitalEntrepreneurKeywords.length;
+    const totalSmallBusinessKeywords = smallBusinessKeywords.length;
+    const totalThroughOurEyesKeywords = throughOurEyesKeywords.length;
+    
+    const digitalMatchPercentage = digitalEntrepreneurMatches / totalDigitalKeywords;
+    const smallBusinessMatchPercentage = smallBusinessMatches / totalSmallBusinessKeywords;
+    const throughOurEyesMatchPercentage = throughOurEyesMatches / totalThroughOurEyesKeywords;
+    
+    // Return the highest match percentage as the overall audience match score
+    return Math.max(digitalMatchPercentage, smallBusinessMatchPercentage, throughOurEyesMatchPercentage);
+  }
+  
   private calculateOverallQuality(metrics: QualityMetrics): string {
-    // Implement quality calculation logic based on metrics
-    return 'Good'; // Mock implementation
+    // Enhanced quality calculation logic with Midnight Magnolia specifics
+    if (metrics.midnightMagnoliaQuality) {
+      // For MM-specific files, prioritize monetization potential and business alignment
+      const mmScore = (
+        metrics.midnightMagnoliaQuality.monetizationPotential * 0.5 +
+        metrics.midnightMagnoliaQuality.businessAlignment * 0.3 +
+        metrics.midnightMagnoliaQuality.targetAudienceMatch * 0.2
+      );
+      
+      if (mmScore > 0.75) return 'Good';
+      if (mmScore > 0.5) return 'Moderate';
+      return 'Poor';
+    }
+    
+    // Document quality assessment
+    if (metrics.documentQuality) {
+      const docScore = (
+        metrics.documentQuality.readability * 0.4 +
+        metrics.documentQuality.formatting * 0.3 +
+        metrics.documentQuality.completeness * 0.3
+      );
+      
+      if (docScore > 0.7) return 'Good';
+      if (docScore > 0.5) return 'Moderate';
+      return 'Poor';
+    }
+    
+    // Code quality assessment
+    if (metrics.codeQuality) {
+      const codeScore = (
+        metrics.codeQuality.lintingScore * 0.3 +
+        metrics.codeQuality.complexity * 0.3 +
+        metrics.codeQuality.documentation * 0.4
+      );
+      
+      if (codeScore > 0.7) return 'Good';
+      if (codeScore > 0.5) return 'Moderate';
+      return 'Poor';
+    }
+    
+    // Design quality assessment
+    if (metrics.designQuality) {
+      const designScore = (
+        metrics.designQuality.resolution * 0.3 +
+        metrics.designQuality.consistency * 0.4 +
+        metrics.designQuality.organization * 0.3
+      );
+      
+      if (designScore > 0.7) return 'Good';
+      if (designScore > 0.5) return 'Moderate';
+      return 'Poor';
+    }
+    
+    // E-book quality assessment
+    if (metrics.ebookQuality) {
+      const ebookScore = (
+        metrics.ebookQuality.formatting * 0.4 +
+        metrics.ebookQuality.navigation * 0.3 +
+        metrics.ebookQuality.metadata * 0.3
+      );
+      
+      if (ebookScore > 0.7) return 'Good';
+      if (ebookScore > 0.5) return 'Moderate';
+      return 'Poor';
+    }
+    
+    // Default fallback
+    return 'Moderate';
   }
 
   private checkMonetizationEligibility(filePath: string, metrics: QualityMetrics): boolean {
