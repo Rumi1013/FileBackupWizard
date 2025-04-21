@@ -49,7 +49,7 @@ export function FileManager() {
   const [organizationView, setOrganizationView] = useState<'all' | 'high-quality' | 'monetizable' | 'delete-candidates'>('all');
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [selectedDirectories, setSelectedDirectories] = useState<Set<string>>(new Set());
-  const [storageProvider, setStorageProvider] = useState<'local' | 'dropbox' | 'google-drive' | 'mm-storage' | 'custom'>('local');
+  const [storageProvider, setStorageProvider] = useState<'local' | 'dropbox' | 'google-drive' | 'github' | 'cloudflare' | 'mm-storage' | 'custom'>('local');
   const { toast } = useToast();
 
   // Query for directory data
@@ -236,7 +236,7 @@ export function FileManager() {
   };
   
   // Handle storage selection
-  const handleStorageSelect = (path: string, provider: 'local' | 'dropbox' | 'google-drive' | 'mm-storage' | 'custom') => {
+  const handleStorageSelect = (path: string, provider: 'local' | 'dropbox' | 'google-drive' | 'github' | 'cloudflare' | 'mm-storage' | 'custom') => {
     setCurrentPath(path);
     setStorageProvider(provider);
     
@@ -244,9 +244,27 @@ export function FileManager() {
     // For example, setting up authentication or showing provider-specific options
     
     if (provider !== 'local' && provider !== 'mm-storage') {
+      let serviceName = "";
+      switch(provider) {
+        case 'dropbox':
+          serviceName = "Dropbox";
+          break;
+        case 'google-drive':
+          serviceName = "Google Drive";
+          break;
+        case 'github':
+          serviceName = "GitHub";
+          break;
+        case 'cloudflare':
+          serviceName = "Cloudflare";
+          break;
+        default:
+          serviceName = "Service";
+      }
+      
       toast({
         title: "External Storage",
-        description: `${provider === 'dropbox' ? 'Dropbox' : 'Google Drive'} connection will be available in the next update.`,
+        description: `${serviceName} connection will be available in the next update.`,
         variant: "default",
       });
     }

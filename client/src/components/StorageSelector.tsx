@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Input } from './ui/input';
-import { Database, FolderOpen, HardDrive, Cloud, Package } from 'lucide-react';
+import { Database, FolderOpen, HardDrive, Cloud, Package, Github, CloudCog } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
-type StorageProviderType = 'local' | 'dropbox' | 'google-drive' | 'mm-storage' | 'custom';
+type StorageProviderType = 'local' | 'dropbox' | 'google-drive' | 'github' | 'cloudflare' | 'mm-storage' | 'custom';
 
 interface StorageProvider {
   id: StorageProviderType;
@@ -55,6 +55,20 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
       name: 'Google Drive',
       icon: <Cloud className="h-6 w-6" />,
       description: 'Access files from Google Drive',
+      connected: false
+    },
+    {
+      id: 'github',
+      name: 'GitHub',
+      icon: <Github className="h-6 w-6" />,
+      description: 'Access repositories from GitHub',
+      connected: false
+    },
+    {
+      id: 'cloudflare',
+      name: 'Cloudflare',
+      icon: <CloudCog className="h-6 w-6" />,
+      description: 'Access files from Cloudflare R2',
       connected: false
     }
   ];
