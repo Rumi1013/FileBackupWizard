@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction, Router } from 'express';
 import { generateTagRecommendations, generateBatchTagRecommendations, TagRecommendation } from './services/ai-tag-recommender';
-import { storage } from './storage';
+import { storage, InsertFileTag, InsertFileTagMapping } from './storage';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -39,11 +39,11 @@ router.get('/recommend', async (req: Request, res: Response, next: NextFunction)
       status: 200,
       data: recommendations
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating tag recommendations:', error);
     
     // Special handling for OpenAI key errors
-    if (error.message && error.message.includes('OPENAI_API_KEY')) {
+    if (error?.message && error.message.includes('OPENAI_API_KEY')) {
       return res.status(401).json({
         status: 401,
         message: 'OpenAI API key is missing or invalid. Please check your environment variables.'
@@ -77,11 +77,11 @@ router.post('/recommend-batch', async (req: Request, res: Response, next: NextFu
       status: 200,
       data: recommendations
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating batch tag recommendations:', error);
     
     // Special handling for OpenAI key errors
-    if (error.message && error.message.includes('OPENAI_API_KEY')) {
+    if (error?.message && error.message.includes('OPENAI_API_KEY')) {
       return res.status(401).json({
         status: 401,
         message: 'OpenAI API key is missing or invalid. Please check your environment variables.'
@@ -117,16 +117,18 @@ router.post('/apply', async (req: Request, res: Response, next: NextFunction) =>
 
     // Create a new tag from the recommendation
     const fileId = path.normalize(filePath);
-    const tag = await storage.createTag({
+    const tag = await storage.createFileTag({
       name: recommendation.name,
       emoji: recommendation.emoji,
       color: recommendation.color,
-      description: recommendation.description,
-      createdAt: new Date().toISOString()
+      description: recommendation.description
     });
 
     // Apply the tag to the file
-    const mapping = await storage.addTagToFile(fileId, tag.id);
+    const mapping = await storage.addTagToFile({
+      fileId: fileId,
+      tagId: tag.id
+    });
     
     return res.status(200).json({
       status: 200,
@@ -168,16 +170,18 @@ router.post('/apply-batch', async (req: Request, res: Response, next: NextFuncti
       for (const recommendation of recommendations) {
         try {
           // Create a new tag from the recommendation
-          const tag = await storage.createTag({
+          const tag = await storage.createFileTag({
             name: recommendation.name,
             emoji: recommendation.emoji,
             color: recommendation.color,
-            description: recommendation.description,
-            createdAt: new Date().toISOString()
+            description: recommendation.description
           });
       
           // Apply the tag to the file
-          const mapping = await storage.addTagToFile(fileId, tag.id);
+          const mapping = await storage.addTagToFile({
+            fileId: fileId,
+            tagId: tag.id
+          });
           fileResults.push({ tag, mapping });
         } catch (error) {
           console.error(`Error applying tag to ${filePath}:`, error);

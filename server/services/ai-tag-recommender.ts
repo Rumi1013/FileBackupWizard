@@ -127,16 +127,17 @@ ${existingTagsInfo}`
     });
 
     // Parse and return the recommendations
-    const tagSuggestions = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content || '{"recommendations": []}';
+    const tagSuggestions = JSON.parse(content);
     
     if (!tagSuggestions.recommendations || !Array.isArray(tagSuggestions.recommendations)) {
       throw new Error('Invalid response format from OpenAI');
     }
     
     return tagSuggestions.recommendations;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating tag recommendations:', error);
-    throw error;
+    throw new Error(error?.message || 'Unknown error generating tag recommendations');
   }
 }
 
@@ -152,7 +153,7 @@ export async function generateBatchTagRecommendations(
   for (const filePath of filePaths) {
     try {
       results[filePath] = await generateTagRecommendations(filePath);
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error generating tags for ${filePath}:`, error);
       results[filePath] = [];
     }
