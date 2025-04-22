@@ -8,6 +8,7 @@ import StorageSelector from "./StorageSelector";
 import { FileTags } from "./FileTags";
 import TagPresetManager from "./TagPresetManager";
 import BatchTagOrganizer from "./BatchTagOrganizer";
+import TagSearch from "./TagSearch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -776,6 +777,10 @@ export function FileManager() {
                   <AlertTriangle className="mr-2 h-4 w-4" />
                   Deletion
                 </TabsTrigger>
+                <TabsTrigger value="tag-search">
+                  <Tag className="mr-2 h-4 w-4" />
+                  Tag Search
+                </TabsTrigger>
               </TabsList>
             </div>
 
@@ -927,6 +932,33 @@ export function FileManager() {
                         No files marked for deletion
                       </div>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="tag-search" className="mt-0">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Tag className="h-5 w-5 text-blue-500" />
+                        <h3 className="font-medium">Tag-Based File Search</h3>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          className="flex items-center gap-1"
+                          onClick={() => refetch()}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          Refresh
+                        </Button>
+                      </div>
+                    </div>
+                    <TagSearch />
                   </div>
                 </CardContent>
               </Card>
