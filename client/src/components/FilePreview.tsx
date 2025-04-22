@@ -17,7 +17,16 @@ import {
   LightbulbIcon, 
   SparklesIcon,
   RefreshCwIcon,
-  InfoIcon
+  InfoIcon,
+  Video as FileVideoIcon,
+  Music as FileAudioIcon,
+  FileType as FilePdfIcon,
+  FileJson,
+  Archive as FileArchiveIcon,
+  Table as FileSpreadsheetIcon,
+  Presentation,
+  CheckCircle,
+  Download
 } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -192,13 +201,52 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
   const getFileIcon = () => {
     if (!data) return <FileIcon className="h-5 w-5" />;
     
-    if (['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg'].includes(data.fileType)) {
+    // Image files
+    if (['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp'].includes(data.fileType)) {
       return <ImageIcon className="h-5 w-5" />;
-    } else if (isCodeFile(data.fileType)) {
+    } 
+    // Code files
+    else if (isCodeFile(data.fileType)) {
       return <FileCodeIcon className="h-5 w-5" />;
-    } else if (['.txt', '.md', '.doc', '.docx', '.pdf'].includes(data.fileType)) {
+    } 
+    // Text files
+    else if (['.txt', '.md', '.rtf', '.log'].includes(data.fileType)) {
       return <FileTextIcon className="h-5 w-5" />;
-    } else {
+    }
+    // Document files
+    else if (['.doc', '.docx', '.odt'].includes(data.fileType)) {
+      return <FileTextIcon className="h-5 w-5 text-blue-500" />;
+    }
+    // PDF files
+    else if (data.fileType === '.pdf') {
+      return <FilePdfIcon className="h-5 w-5 text-red-500" />;
+    }
+    // JSON files
+    else if (data.fileType === '.json') {
+      return <FileJsonIcon className="h-5 w-5 text-green-500" />;
+    }
+    // Spreadsheet files
+    else if (['.xls', '.xlsx', '.csv', '.ods'].includes(data.fileType)) {
+      return <FileSpreadsheetIcon className="h-5 w-5 text-green-600" />;
+    }
+    // Presentation files
+    else if (['.ppt', '.pptx', '.odp'].includes(data.fileType)) {
+      return <FilePresentationIcon className="h-5 w-5 text-orange-500" />;
+    }
+    // Video files
+    else if (['.mp4', '.mov', '.avi', '.mkv', '.webm', '.wmv', '.flv'].includes(data.fileType)) {
+      return <FileVideo2Icon className="h-5 w-5 text-purple-500" />;
+    }
+    // Audio files
+    else if (['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a'].includes(data.fileType)) {
+      return <FileAudioIcon className="h-5 w-5 text-yellow-500" />;
+    }
+    // Archive files
+    else if (['.zip', '.rar', '.tar', '.gz', '.7z'].includes(data.fileType)) {
+      return <FileArchiveIcon className="h-5 w-5 text-amber-600" />;
+    }
+    // Default for unknown file types
+    else {
       return <FileIcon className="h-5 w-5" />;
     }
   };
@@ -230,9 +278,23 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
 
         {/* Preview type tabs */}
         <Tabs defaultValue="text" onValueChange={setPreviewType} className="mb-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="text">Text</TabsTrigger>
-            <TabsTrigger value="image">Image</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="text">
+              <FileTextIcon className="h-4 w-4 mr-2" />
+              Text
+            </TabsTrigger>
+            <TabsTrigger value="image">
+              <ImageIcon className="h-4 w-4 mr-2" />
+              Image
+            </TabsTrigger>
+            <TabsTrigger value="binary">
+              <FilePdfIcon className="h-4 w-4 mr-2" />
+              Document
+            </TabsTrigger>
+            <TabsTrigger value="info">
+              <InfoIcon className="h-4 w-4 mr-2" />
+              Details
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
