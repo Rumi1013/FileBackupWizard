@@ -20,6 +20,7 @@ import recommendationRoutes from './recommendation-routes';
 import previewRoutes from './preview-routes';
 import githubRoutes from './github-routes';
 import fileTagRoutes from './file-tag-routes';
+import aiTagRoutes from './ai-tag-routes';
 
 // List of supported file types
 const VALID_FILE_TYPES = [
