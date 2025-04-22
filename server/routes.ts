@@ -874,6 +874,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register file tag routes (emoji-based tagging system)
   app.use('/api/tags', fileTagRoutes);
+  
+  // Register AI tag recommendation routes
+  app.use('/api/ai-tags', aiTagRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

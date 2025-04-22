@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import fs from "fs";
 import path from "path";
 import { fileTypeFromFile } from "file-type";
-import { FileTag } from "@shared/schema";
+import { FileTag } from "../storage";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -52,9 +52,9 @@ Type: ${fileType?.mime || 'Unknown'}
 Size: ${Math.round(stats.size / 1024)} KB
 Created: ${stats.birthtime}
 Modified: ${stats.mtime}`;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error reading file:', error);
-    return `Error reading file: ${error.message}`;
+    return `Error reading file: ${error?.message || 'Unknown error'}`;
   }
 }
 
