@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+
+// Type definition for API responses
+interface ApiResponse<T = any> {
+  data: T;
+  status: number;
+  message?: string;
+}
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -101,7 +108,7 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
     queryKey: ['/api/tags'],
     queryFn: async () => {
       try {
-        const response = await apiRequest('GET', '/api/tags');
+        const response = await apiRequest<ApiResponse<FileTag[]>>('GET', '/api/tags');
         return response.data || [];
       } catch (error) {
         console.error('Error fetching tags:', error);
@@ -119,7 +126,7 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
     queryFn: async () => {
       if (!fileId) return [];
       try {
-        const response = await apiRequest('GET', `/api/tags/file/${fileId}`);
+        const response = await apiRequest<ApiResponse<FileTag[]>>('GET', `/api/tags/file/${fileId}`);
         return response.data || [];
       } catch (error) {
         console.error('Error fetching file tags:', error);
@@ -132,7 +139,7 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
   // Create a new tag
   const createTagMutation = useMutation({
     mutationFn: async (newTag: Omit<FileTag, 'id' | 'createdAt'>) => {
-      return await apiRequest('POST', '/api/tags', newTag);
+      return await apiRequest<ApiResponse<FileTag>>('POST', '/api/tags', newTag);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
@@ -465,14 +472,57 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="emoji" className="text-right">Emoji</Label>
-                      <Input 
-                        id="emoji" 
-                        value={tagForm.emoji} 
-                        onChange={(e) => setTagForm({...tagForm, emoji: e.target.value})}
-                        className="col-span-3" 
-                        required
-                        placeholder="📄, 🔥, ⭐, etc."
-                      />
+                      <div className="col-span-3 flex items-center gap-2">
+                        <Input 
+                          id="emoji" 
+                          value={tagForm.emoji} 
+                          onChange={(e) => setTagForm({...tagForm, emoji: e.target.value})}
+                          className="flex-1" 
+                          required
+                          placeholder="📄, 🔥, ⭐, etc."
+                        />
+                        <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                          <PopoverTrigger asChild>
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-10 w-10"
+                            >
+                              <SmilePlus className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-64 p-0" align="end">
+                            <div className="p-3">
+                              <div className="font-medium text-sm mb-2">Common Emojis</div>
+                              <Tabs defaultValue="Priority">
+                                <TabsList className="grid grid-cols-3 mb-2">
+                                  <TabsTrigger value="Priority">Priority</TabsTrigger>
+                                  <TabsTrigger value="Status">Status</TabsTrigger>
+                                  <TabsTrigger value="Type">Type</TabsTrigger>
+                                </TabsList>
+                                {Object.entries(commonEmojis).map(([category, emojiList]) => (
+                                  <TabsContent key={category} value={category} className="mt-0">
+                                    <div className="grid grid-cols-6 gap-2">
+                                      {emojiList.map(emoji => (
+                                        <Button
+                                          key={emoji}
+                                          type="button"
+                                          variant="outline"
+                                          className="h-10 w-10 p-0 text-lg"
+                                          onClick={() => handleEmojiSelect(emoji)}
+                                        >
+                                          {emoji}
+                                        </Button>
+                                      ))}
+                                    </div>
+                                  </TabsContent>
+                                ))}
+                              </Tabs>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                       <Label htmlFor="color" className="text-right">Color</Label>
@@ -515,8 +565,8 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
           {isLoading ? (
             <div className="text-sm text-muted-foreground">Loading tags...</div>
-          ) : allTags && allTags.length > 0 ? (
-            allTags.map(tag => (
+          ) : filteredTags && filteredTags.length > 0 ? (
+            filteredTags.map(tag => (
               <Card key={tag.id} className="overflow-hidden">
                 <div 
                   className="h-2" 
@@ -582,8 +632,23 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
                 </CardFooter>
               </Card>
             ))
+          ) : searchQuery || selectedCategory ? (
+            <div className="col-span-3 text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg border border-dashed flex flex-col items-center justify-center gap-2">
+              <Filter className="h-8 w-8 text-muted-foreground/50" />
+              <p>No tags match your filters</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory(null);
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
           ) : (
-            <div className="text-sm text-muted-foreground">No tags found</div>
+            <div className="col-span-3 text-sm text-muted-foreground">No tags found. Create your first tag with the "New Tag" button.</div>
           )}
         </div>
       </div>
@@ -611,14 +676,57 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-emoji" className="text-right">Emoji</Label>
-                <Input 
-                  id="edit-emoji" 
-                  value={tagForm.emoji} 
-                  onChange={(e) => setTagForm({...tagForm, emoji: e.target.value})}
-                  className="col-span-3" 
-                  required
-                  placeholder="📄, 🔥, ⭐, etc."
-                />
+                <div className="col-span-3 flex items-center gap-2">
+                  <Input 
+                    id="edit-emoji" 
+                    value={tagForm.emoji} 
+                    onChange={(e) => setTagForm({...tagForm, emoji: e.target.value})}
+                    className="flex-1" 
+                    required
+                    placeholder="📄, 🔥, ⭐, etc."
+                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10"
+                      >
+                        <SmilePlus className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-0" align="end">
+                      <div className="p-3">
+                        <div className="font-medium text-sm mb-2">Common Emojis</div>
+                        <Tabs defaultValue="Priority">
+                          <TabsList className="grid grid-cols-3 mb-2">
+                            <TabsTrigger value="Priority">Priority</TabsTrigger>
+                            <TabsTrigger value="Status">Status</TabsTrigger>
+                            <TabsTrigger value="Type">Type</TabsTrigger>
+                          </TabsList>
+                          {Object.entries(commonEmojis).map(([category, emojiList]) => (
+                            <TabsContent key={category} value={category} className="mt-0">
+                              <div className="grid grid-cols-6 gap-2">
+                                {emojiList.map(emoji => (
+                                  <Button
+                                    key={emoji}
+                                    type="button"
+                                    variant="outline"
+                                    className="h-10 w-10 p-0 text-lg"
+                                    onClick={() => handleEmojiSelect(emoji)}
+                                  >
+                                    {emoji}
+                                  </Button>
+                                ))}
+                              </div>
+                            </TabsContent>
+                          ))}
+                        </Tabs>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="edit-color" className="text-right">Color</Label>
