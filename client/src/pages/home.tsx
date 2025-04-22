@@ -2,7 +2,7 @@ import { FileManager } from "@/components/FileManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { FileIcon, EyeIcon, Sparkles, Github, Trash2 } from "lucide-react";
+import { FileIcon, EyeIcon, Sparkles, Github, Trash2, Calendar } from "lucide-react";
 
 export default function Home() {
   return (
