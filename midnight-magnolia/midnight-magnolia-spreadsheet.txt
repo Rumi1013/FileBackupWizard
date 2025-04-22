@@ -1,0 +1,79 @@
+Quarterly Planning Framework
+Quarter,Strategic Focus,Revenue Goal,Key Projects
+Q1,Brand Establishment,"$15,000",Website launch; Initial 5 digital products
+Q2,Audience Growth,"$25,000",Marketing campaigns; Client acquisition
+Q3,Product Expansion,"$35,000",New digital offerings; Membership program
+Q4,Passive Income Scaling,"$50,000",Automation systems; Multiple revenue streams
+
+Weekly Planning Template
+Day,Morning Focus,Afternoon Focus,Self-Care,KPIs
+Monday,Planning & Strategy,Content Creation,Meditation,Weekly plan completed
+Tuesday,Digital Product Work,Client Services,Walking,Product milestones met
+Wednesday,Marketing Tasks,Team Collaboration,Reading,Engagement metrics
+Thursday,Technical Development,Analytics Review,Art creation,Development goals
+Friday,Client Communication,Admin & Finances,Nature time,Weekly revenue
+Weekend,Reflection,Rest & Inspiration,Full rest day,N/A
+
+ADHD-Friendly Task Management
+Priority,Task Type,Time Block,Energy Level,Completion Reward
+Urgent,Technical (focused),25-minute blocks,High,Gold star system
+Important,Creative (flowing),45-minute blocks,Medium,Task visualization
+Maintenance,Administrative,15-minute blocks,Low,Small breaks
+Planning,Strategic,30-minute blocks,Medium-High,Visual progress tracking
+
+Core Business Systems
+Category,Primary Tool,Secondary Tool,Purpose,Integration Point
+Website,Wix,GitHub,Brand hub/Portfolio,Shopify connection
+E-commerce,Shopify,-,Product sales/Delivery,Wix/Email marketing
+Design,Adobe Creative Suite,Canva,Product creation/Branding,Social media/Products
+Content,Notion,Google Workspace,Planning/Documentation,Team collaboration
+Communication,Email,Slack,Client outreach/Team chat,CRM
+Project Management,Asana,Trello,Task tracking/Timelines,Calendar
+Analytics,Google Analytics,Shopify Reports,Performance tracking,Business decisions
+
+Digital Product Creation Workflow
+Stage,Tools,File Formats,Output,Time Estimate
+Planning,Notion/Miro,TXT/PDF,Outline/Structure,2-3 days
+Design,InDesign/Photoshop,AI/PSD/INDD,Visual mockups,3-5 days
+Content,Google Docs/Notion,DOCX/MD,Written content,5-7 days
+Development,InDesign/Acrobat,INDD/PDF,Interactive document,3-4 days
+Testing,Acrobat/Preview,PDF,Quality assurance,1-2 days
+Delivery,Shopify,PDF/ZIP,Customer download,Automated
+
+Automation Tools
+Business Area,Automation Tool,Process Automated,Time Saved Weekly
+Marketing,Buffer/Later,Social media scheduling,5-7 hours
+Sales,Shopify Automations,Order processing/Delivery,3-5 hours
+Content,Zapier,Cross-platform publishing,2-4 hours
+Client Services,Calendly/Acuity,Appointment scheduling,2-3 hours
+Admin,QuickBooks,Financial tracking,3-4 hours
+Email,MailerLite,Sequences/Newsletters,4-6 hours
+
+Development Tools
+Category,Primary Tool,Secondary Tool,Purpose,Integration Point
+Code Development,Replit,VS Code,Interactive coding/Testing,GitHub
+Deployment,Vercel,Netlify,Web hosting/CI/CD,GitHub/Custom domain
+Version Control,GitHub,-,Code repository,Replit/Vercel
+Backend,Node.js,Express,API development,Database connections
+Frontend,React,Next.js,Dynamic interfaces,Vercel deployment
+Database,MongoDB,Firebase,Data storage,API integration
+Testing,Jest,Cypress,Unit and E2E testing,GitHub Actions
+
+Code Snippets Library
+Component,Code Language,Purpose,Implementation Location
+Hero Section Animation,JavaScript/GSAP,Animated homepage elements,Homepage
+Color Theme Variables,CSS,Brand color system,Global stylesheet
+Mobile Navigation,JavaScript,Responsive menu,Header component
+Product Card Template,Liquid/HTML,Shopify product display,Shop pages
+Parallax Effects,JavaScript/CSS,Scrolling animations,Various pages
+Image Galleries,React,Portfolio displays,Gallery pages
+Newsletter Form,HTML/JavaScript,Email capture,Footer component
+
+Image Prompt Templates
+Image Type,Prompt Template,Usage,Style Notes
+Hero Background,"Create a midnight blue (#0A192F) to teal (#0A3B4D) gradient background with silhouetted historic Black homestead, golden crescent moon, and subtle magnolia flowers",Homepage hero,Atmospheric with depth
+Product Cover,"Design a minimal cover with midnight blue background, gold accents, white magnolia motif, and [PRODUCT TITLE] in Playfair Display",Digital product covers,Clean and elegant
+Social Media,"Create a square image with midnight blue background, silhouetted Black woman figure backlit by gold light, [QUOTE] in Montserrat font, and small magnolia flower accent",Instagram posts,Consistent brand identity
+Profile Picture,"Design a circular profile image with midnight blue background, stylized gold 'MM' monogram, and subtle magnolia petal accent",Social media profiles,Professional and branded
+Blog Header,"Create a wide banner with midnight blue to teal gradient, row of white magnolia flowers along bottom, and [BLOG TITLE] in gold Playfair Display",Blog posts,Elegant header format
+Email Banner,"Design a rectangular banner with dark blue background, gold crescent moon, white magnolia flowers, and 'Midnight Magnolia' in elegant typography",Email marketing,Recognizable brand element
