@@ -787,6 +787,7 @@ export function FileManager() {
                       data={directoryData} 
                       onSelect={handleFileSelect}
                       currentPath={currentPath}
+                      selectedFile={selectedFile}
                       multiSelect={isBatchMode}
                       selectedDirs={selectedDirectories}
                       onMultiSelectChange={setSelectedDirectories}
@@ -828,6 +829,7 @@ export function FileManager() {
                         }} 
                         onSelect={handleFileSelect}
                         currentPath={currentPath}
+                        selectedFile={selectedFile}
                         multiSelect={isBatchMode}
                         selectedDirs={selectedDirectories}
                         onMultiSelectChange={setSelectedDirectories}
@@ -870,6 +872,7 @@ export function FileManager() {
                         }} 
                         onSelect={handleFileSelect}
                         currentPath={currentPath}
+                        selectedFile={selectedFile}
                         multiSelect={isBatchMode}
                         selectedDirs={selectedDirectories}
                         onMultiSelectChange={setSelectedDirectories}
@@ -913,6 +916,7 @@ export function FileManager() {
                         }} 
                         onSelect={handleFileSelect}
                         currentPath={currentPath}
+                        selectedFile={selectedFile}
                         multiSelect={isBatchMode}
                         selectedDirs={selectedDirectories}
                         onMultiSelectChange={setSelectedDirectories}
