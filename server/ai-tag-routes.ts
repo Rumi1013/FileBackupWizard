@@ -134,7 +134,7 @@ router.post('/apply', async (req: Request, res: Response, next: NextFunction) =>
       status: 200,
       data: { tag, mapping }
     });
-  } catch (error) {
+  } catch (error: any) {
     next(error);
   }
 });
@@ -183,7 +183,7 @@ router.post('/apply-batch', async (req: Request, res: Response, next: NextFuncti
             tagId: tag.id
           });
           fileResults.push({ tag, mapping });
-        } catch (error) {
+        } catch (error: any) {
           console.error(`Error applying tag to ${filePath}:`, error);
         }
       }
@@ -198,7 +198,7 @@ router.post('/apply-batch', async (req: Request, res: Response, next: NextFuncti
       status: 200,
       data: results
     });
-  } catch (error) {
+  } catch (error: any) {
     next(error);
   }
 });
