@@ -1173,6 +1173,46 @@ export class MemStorage implements IStorage {
     
     return tags;
   }
+  
+  async getAllFileTagMappings(): Promise<{fileId: string; tagId: string; filePath?: string; fileName?: string; tag?: FileTag}[]> {
+    // Get all mappings with enhanced information
+    const mappings = Array.from(this.fileTagMappings.values());
+    
+    // Enhance mappings with file paths and tag information
+    const enhancedMappings = await Promise.all(mappings.map(async (mapping) => {
+      // Find tag information
+      const tag = await this.getFileTag(mapping.tagId);
+      
+      // Find file path from file assessments
+      let filePath: string | undefined = undefined;
+      
+      // Assuming fileId could be a filePath in some cases
+      if (mapping.fileId.includes('/')) {
+        filePath = mapping.fileId;
+      } else {
+        // Try to find the file path from file assessments
+        const assessment = Array.from(this.fileAssessments.values())
+          .find(assessment => assessment.id.toString() === mapping.fileId);
+          
+        if (assessment) {
+          filePath = assessment.filePath;
+        }
+      }
+      
+      // Get file name from path if available
+      const fileName = filePath ? path.basename(filePath) : undefined;
+      
+      return {
+        fileId: mapping.fileId,
+        tagId: mapping.tagId,
+        filePath,
+        fileName,
+        tag
+      };
+    }));
+    
+    return enhancedMappings;
+  }
 }
 
 export const storage = new MemStorage();
@@ -2218,6 +2258,12 @@ export class DatabaseStorage implements IStorage {
   async getTagsForFile(fileId: string): Promise<FileTag[]> {
     // TODO: Implement DB-based storage when migrating to PostgreSQL
     // This would be replaced with a proper DB query
+    return [];
+  }
+  
+  async getAllFileTagMappings(): Promise<{fileId: string; tagId: string; filePath?: string; fileName?: string; tag?: FileTag}[]> {
+    // TODO: Implement DB-based storage when migrating to PostgreSQL
+    // This would be replaced with a proper DB query to join file tag mappings with files and tags
     return [];
   }
 }

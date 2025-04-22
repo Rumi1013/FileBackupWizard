@@ -759,7 +759,7 @@ export function FileManager() {
           {/* File View Tabs */}
           <Tabs defaultValue="all">
             <div className="flex justify-between items-center mb-2">
-              <TabsList>
+              <TabsList className="grid grid-cols-5 w-full">
                 <TabsTrigger value="all" onClick={() => setOrganizationView('all')}>
                   <Folder className="mr-2 h-4 w-4" />
                   All Files
