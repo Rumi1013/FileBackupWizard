@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import PreviewPage from "./pages/PreviewPage";
 import RecommendationsPage from "./pages/RecommendationsPage";
 import GitHubPage from "./pages/GitHubPage";
+import PlannerPage from "./pages/PlannerPage";
 
 function Router() {
   return (
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/preview" component={PreviewPage} />
       <Route path="/recommendations" component={RecommendationsPage} />
       <Route path="/github" component={GitHubPage} />
+      <Route path="/planner" component={PlannerPage} />
       <Route component={NotFound} />
     </Switch>
   );
