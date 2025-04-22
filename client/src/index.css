@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --background: 240 65% 8%;
-    --foreground: 40 30% 97%;
+    --background: 220 20% 97%;
+    --foreground: 220 20% 15%;
     --card: 240 65% 10%;
     --card-foreground: 40 30% 97%;
     --popover: 240 65% 10%;
@@ -58,6 +58,22 @@
 @layer components {
   .container {
     @apply px-4 mx-auto max-w-7xl;
+  }
+
+  .mm-heading {
+    @apply text-3xl font-serif tracking-tight text-primary;
+  }
+
+  .mm-card {
+    @apply rounded-lg border bg-white/50 backdrop-blur-sm p-6 shadow-lg transition-all hover:shadow-xl;
+  }
+
+  .mm-button {
+    @apply px-4 py-2 bg-[#D4AF37] text-white rounded-md hover:bg-[#B89B30] transition-colors;
+  }
+
+  .mm-input {
+    @apply border-2 border-gray-200 rounded-md px-3 py-2 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] outline-none;
   }
 
   .card {
