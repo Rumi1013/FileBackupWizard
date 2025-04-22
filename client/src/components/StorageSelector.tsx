@@ -40,8 +40,21 @@ interface StorageProvider {
 interface DirectoryEntry {
   name: string;
   path: string;
-  type: 'file' | 'directory';
+  type: 'file' | 'directory' | 'symlink' | 'unknown' | 'error';
   children?: DirectoryEntry[];
+  size?: number;
+  hidden?: boolean;
+  error?: string;
+  max_depth_reached?: boolean;
+  status?: string;
+  last_modified?: number;
+  permission_error?: boolean;
+  cycle_detected?: boolean;
+  suggestion?: string;
+  suggestedPath?: string;
+  message?: string;
+  excluded?: boolean;
+  restricted?: boolean;
 }
 
 interface StorageSelectorProps {
@@ -94,6 +107,22 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
       icon: <Package className="h-5 w-5" />,
       basePath: '/midnight-magnolia',
       description: 'Midnight Magnolia dedicated workspace',
+      connected: true
+    },
+    {
+      id: 'local',
+      name: 'Home Directory',
+      icon: <Home className="h-5 w-5" />,
+      basePath: '~',
+      description: 'Access your home directory',
+      connected: true
+    },
+    {
+      id: 'local',
+      name: 'Workspace',
+      icon: <FolderOpen className="h-5 w-5" />,
+      basePath: '/workspace',
+      description: 'Access the workspace directory',
       connected: true
     },
     {
@@ -298,8 +327,39 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
                         <Skeleton className="h-8 w-full" />
                       </div>
                     ) : error ? (
-                      <div className="p-4 text-sm text-destructive">
-                        Error loading directory: {String(error)}
+                      <div className="p-4 space-y-2">
+                        <div className="text-sm text-destructive font-medium">
+                          Error loading directory: {String(error)}
+                        </div>
+                        {directoryData?.error && (
+                          <div className="text-xs bg-muted/50 p-2 rounded-md">
+                            {directoryData.error}
+                          </div>
+                        )}
+                        {directoryData?.status === 'restricted' && (
+                          <div className="text-xs text-amber-500">
+                            This directory is restricted for security reasons.
+                          </div>
+                        )}
+                        {directoryData?.status === 'not_found' && (
+                          <div className="text-xs text-muted-foreground">
+                            The directory does not exist or you don't have permission to access it.
+                          </div>
+                        )}
+                        {directoryData?.suggestion && (
+                          <div className="text-xs text-green-500 mt-2">
+                            Suggestion: {directoryData.suggestion}
+                            {directoryData.suggestedPath && (
+                              <Button 
+                                variant="link" 
+                                className="text-xs p-0 h-auto ml-1 text-primary" 
+                                onClick={() => handleNavigate(directoryData.suggestedPath as string)}
+                              >
+                                Go there
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ) : directoryData ? (
                       <div className="p-1">
@@ -313,11 +373,24 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
                                 onClick={() => handleDirectorySelect(entry)}
                               >
                                 {entry.type === 'directory' ? (
-                                  <Folder className="h-5 w-5 mr-2 text-primary" />
+                                  <Folder className={`h-5 w-5 mr-2 ${entry.max_depth_reached ? 'text-yellow-500' : 'text-primary'}`} />
+                                ) : entry.type === 'file' ? (
+                                  <FileIcon className={`h-5 w-5 mr-2 ${entry.hidden ? 'text-gray-400' : 'text-muted-foreground'}`} />
+                                ) : entry.type === 'symlink' ? (
+                                  <ChevronRight className="h-5 w-5 mr-2 text-blue-500" />
+                                ) : entry.type === 'error' ? (
+                                  <span className="h-5 w-5 mr-2 text-destructive">❌</span>
                                 ) : (
                                   <FileIcon className="h-5 w-5 mr-2 text-muted-foreground" />
                                 )}
-                                <span className="text-sm truncate">{entry.name}</span>
+                                <span className={`text-sm truncate ${entry.hidden ? 'italic text-gray-400' : ''} ${entry.error ? 'text-destructive' : ''} ${entry.cycle_detected ? 'text-yellow-400' : ''}`}>
+                                  {entry.name}
+                                </span>
+                                {entry.size && entry.type === 'file' && (
+                                  <span className="ml-auto text-xs text-muted-foreground">
+                                    {Math.round(entry.size / 1024)} KB
+                                  </span>
+                                )}
                               </Button>
                             ))}
                           </div>
