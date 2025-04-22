@@ -63,4 +63,37 @@
   .card {
     @apply rounded-lg border bg-card p-4 shadow-sm;
   }
+
+  /* File box improvements */
+  .file-item {
+    @apply p-3 mb-2 rounded-md border transition-all duration-200 hover:border-primary/50 hover:bg-muted/30 cursor-pointer;
+  }
+
+  .file-item.selected {
+    @apply border-primary bg-primary/10;
+  }
+
+  .file-item-content {
+    @apply flex items-center justify-between gap-3;
+  }
+
+  .file-item-name {
+    @apply font-medium truncate;
+  }
+
+  .file-item-meta {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .directory-tree {
+    @apply space-y-1 p-2;
+  }
+
+  .tree-item {
+    @apply flex items-center gap-2 p-2 rounded-md hover:bg-muted/30 transition-colors;
+  }
+
+  .tree-item-icon {
+    @apply flex-shrink-0 text-muted-foreground;
+  }
 }

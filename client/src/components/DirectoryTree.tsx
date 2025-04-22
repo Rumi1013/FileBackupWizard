@@ -29,12 +29,12 @@ export function DirectoryTree({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [focusedNode, setFocusedNode] = useState<string | null>(null);
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-  
+
   // Keyboard navigation handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!focusedNode) return;
-      
+
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
@@ -106,22 +106,22 @@ export function DirectoryTree({
           break;
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [focusedNode, expanded, selectedDirs, data, onSelect, multiSelect, onMultiSelectChange]);
-  
+
   // Helper function to find a node by path
   const findNodeByPath = (rootNode: DirectoryEntry, path: string): DirectoryEntry | null => {
     if (rootNode.path === path) return rootNode;
-    
+
     if (rootNode.children) {
       for (const child of rootNode.children) {
         const found = findNodeByPath(child, path);
         if (found) return found;
       }
     }
-    
+
     return null;
   };
 
@@ -141,44 +141,44 @@ export function DirectoryTree({
       onSelect(node.path);
     }
   };
-  
+
   const handleDirSelect = (node: DirectoryEntry, e: React.MouseEvent) => {
     if (!multiSelect || !onMultiSelectChange || node.type !== 'directory') return;
-    
+
     e.stopPropagation();
     setFocusedNode(node.path);
-    
+
     const newSelected = new Set(selectedDirs);
     if (selectedDirs.has(node.path)) {
       newSelected.delete(node.path);
     } else {
       newSelected.add(node.path);
     }
-    
+
     onMultiSelectChange(newSelected);
   };
 
   // Helper function to get icon based on file name/extension
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
-    
+
     if (!extension) return <File className="h-4 w-4 text-gray-500" />;
-    
+
     // Image files
     if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'].includes(extension)) {
       return <Image className="h-4 w-4 text-blue-400" />;
     }
-    
+
     // Code files
     if (['js', 'jsx', 'ts', 'tsx', 'html', 'css', 'json', 'py', 'rb', 'java', 'go', 'rs', 'php'].includes(extension)) {
       return <FileCode className="h-4 w-4 text-purple-500" />;
     }
-    
+
     // Document files
     if (['pdf', 'doc', 'docx', 'txt', 'md', 'rtf'].includes(extension)) {
       return <FileText className="h-4 w-4 text-amber-500" />;
     }
-    
+
     // Default file icon
     return <File className="h-4 w-4 text-gray-500" />;
   };
@@ -189,14 +189,14 @@ export function DirectoryTree({
     const children = node.children || [];
     const isSelected = selectedDirs.has(node.path);
     const isFocused = focusedNode === node.path;
-    
+
     // Get file extension for styling
     const fileExtension = node.type === 'file' ? node.name.split('.').pop()?.toLowerCase() : null;
 
     return (
       <div key={node.path}>
         <div 
-          className={`flex items-center gap-2 py-1.5 px-2 rounded-md cursor-pointer select-none transition-colors
+          className={`flex items-center gap-2 py-1.5 px-2 rounded-md cursor-pointer select-none transition-colors file-item
             ${node.type === 'file' ? 'hover:bg-blue-100 dark:hover:bg-blue-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-800/50'}
             ${isSelected && node.type === 'directory' ? 'bg-gray-100 dark:bg-gray-800/50' : ''}
             ${(isFocused || (node.type === 'file' && selectedFile === node.path)) ? 
@@ -212,6 +212,7 @@ export function DirectoryTree({
           onFocus={() => setFocusedNode(node.path)}
           data-testid={`node-${node.path}`}
         >
+          <div className="file-item-content"> {/* Added div for content */}
           {hasChildren && (
             <Button
               variant="ghost"
@@ -274,12 +275,13 @@ export function DirectoryTree({
           <span className={`text-sm font-medium ${(node.type === 'file' && selectedFile === node.path) ? 'text-white' : ''}`}>
             {node.name}
           </span>
-          
+
           {node.size && (
             <span className={`text-xs ${(node.type === 'file' && selectedFile === node.path) ? 'text-white/80' : 'text-muted-foreground'}`}>
               ({Math.round(node.size / 1024)} KB)
             </span>
           )}
+          </div> {/* End of added div */}
         </div>
 
         {isExpanded && children.length > 0 && (
