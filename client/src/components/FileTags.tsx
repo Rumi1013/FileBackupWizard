@@ -29,7 +29,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Pencil, Trash2, Tag, Plus } from 'lucide-react';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/components/ui/tabs";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Pencil, Trash2, Tag, Plus, Search, Filter, SmilePlus } from 'lucide-react';
 
 // Type definitions for tags
 export interface FileTag {
@@ -268,6 +279,52 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
     }
   };
 
+  // State for tag search and filtering
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  
+  // Common emojis for file organization, grouped by category
+  const commonEmojis = {
+    'Priority': ['⭐', '🔥', '⚡', '🚨', '📌', '🏆'],
+    'Status': ['✅', '❌', '⏳', '🕒', '📝', '🔄'],
+    'Type': ['📄', '📊', '📁', '🖼️', '🎥', '🎵'],
+    'Project': ['🏢', '🏠', '🌟', '💼', '🚀', '🎯'],
+    'Personal': ['❤️', '😊', '👍', '👎', '👀', '✨'],
+    'Weather': ['☀️', '🌧️', '❄️', '🌈', '☁️', '⛈️']
+  };
+  
+  // Filter tags based on search query
+  const filteredTags = allTags?.filter(tag => {
+    const matchesSearch = 
+      searchQuery === '' || 
+      tag.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tag.emoji.includes(searchQuery) ||
+      (tag.description && tag.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesCategory = 
+      !selectedCategory || 
+      getCategoryForEmoji(tag.emoji) === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
+  
+  // Helper to get a likely category for an emoji
+  const getCategoryForEmoji = (emoji: string): string => {
+    for (const [category, emojiList] of Object.entries(commonEmojis)) {
+      if (emojiList.includes(emoji)) {
+        return category;
+      }
+    }
+    return 'Other';
+  };
+  
+  // Handle emoji selection from picker
+  const handleEmojiSelect = (emoji: string) => {
+    setTagForm({...tagForm, emoji});
+    setShowEmojiPicker(false);
+  };
+  
   const isLoading = isLoadingAllTags || isLoadingFileTags;
 
   return (
