@@ -258,14 +258,71 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
                     Quick Actions
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" className="gap-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-1"
+                      onClick={() => {
+                        const blob = new Blob([data.content], { type: 'application/octet-stream' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = data.fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        
+                        toast({
+                          title: "File Downloaded",
+                          description: `${data.fileName} has been downloaded.`
+                        });
+                      }}
+                    >
                       <Download className="h-3.5 w-3.5" />
                       Download
                     </Button>
-                    <Button variant="outline" size="sm" className="gap-1">
-                      <LightbulbIcon className="h-3.5 w-3.5" />
-                      Analyze
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="gap-1"
+                      onClick={() => {
+                        if (!showRecommendations) {
+                          generateRecommendationsMutation.mutate();
+                        } else {
+                          setShowRecommendations(false);
+                        }
+                      }}
+                      disabled={generateRecommendationsMutation.isPending}
+                    >
+                      {generateRecommendationsMutation.isPending ? (
+                        <SparklesIcon className="h-3.5 w-3.5 animate-pulse" />
+                      ) : (
+                        <LightbulbIcon className="h-3.5 w-3.5" />
+                      )}
+                      {generateRecommendationsMutation.isPending ? "Analyzing..." : "Analyze"}
                     </Button>
+                    
+                    {/* Additional actions based on file type */}
+                    {isCodeFile(data.fileType) && (
+                      <Button variant="outline" size="sm" className="gap-1">
+                        <FileCodeIcon className="h-3.5 w-3.5" />
+                        Format Code
+                      </Button>
+                    )}
+                    
+                    {['.doc', '.docx', '.pdf', '.ppt', '.pptx'].includes(data.fileType) && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-1"
+                        onClick={() => window.open(`data:application/octet-stream;base64,${data.content}`, '_blank')}
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Open Externally
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
