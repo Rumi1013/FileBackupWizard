@@ -76,7 +76,7 @@ export async function listUserRepositories(token: string): Promise<Repository[]>
       };
       
       // Calculate activity score based on recent activity, stars, forks, etc.
-      const daysSinceLastActivity = Math.floor((Date.now() - new Date(repo.pushed_at).getTime()) / (1000 * 60 * 60 * 24));
+      const daysSinceLastActivity = Math.floor((Date.now() - new Date(repo.pushed_at || Date.now()).getTime()) / (1000 * 60 * 60 * 24));
       
       // Activity score factors in recency of updates, stars, forks, and open issues
       repoObj.activity_score = calculateActivityScore(

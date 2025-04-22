@@ -48,17 +48,27 @@ export default function GitHubPage() {
     setIsSubmitting(true);
 
     try {
-      // In a real application, you would send this to a secure endpoint
-      // For demonstration, we'll just use localStorage
-      localStorage.setItem('GITHUB_TOKEN', gitHubToken);
+      // Send token to our secure API endpoint
+      const response = await apiRequest('/api/github/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token: gitHubToken }),
+      });
       
-      // Reload the page to apply the token
-      window.location.reload();
-    } catch (error) {
+      toast({
+        title: "Success",
+        description: "GitHub token saved successfully",
+      });
+      
+      // Set our state to reflect that we have a token now
+      setHasGitHubToken(true);
+    } catch (error: any) {
       console.error('Error saving GitHub token:', error);
       toast({
         title: "Error",
-        description: "Failed to save GitHub token",
+        description: error?.message || "Failed to save GitHub token. Please check if the token is valid.",
         variant: "destructive",
       });
     } finally {

@@ -1,7 +1,41 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { listUserRepositories, getRepositoryUsage, archiveRepository, deleteRepository, getGitHubToken } from './services/github';
+import { listUserRepositories, getRepositoryUsage, archiveRepository, deleteRepository, getGitHubToken, setGitHubToken } from './services/github';
+import { Octokit } from 'octokit';
 
 const router = Router();
+
+/**
+ * Store GitHub token
+ * POST /api/github/token
+ * Body: { token: string }
+ */
+router.post('/token', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token || typeof token !== 'string' || token.trim().length === 0) {
+      return res.status(400).json({ error: 'A valid GitHub token is required' });
+    }
+    
+    // Validate token by making a simple API call
+    try {
+      const octokit = new Octokit({ auth: token });
+      await octokit.rest.users.getAuthenticated();
+      
+      // Store the token
+      await setGitHubToken(token);
+      
+      res.json({ success: true, message: 'GitHub token stored successfully' });
+    } catch (error: any) {
+      return res.status(401).json({ 
+        error: 'Invalid GitHub token. Please check your token and ensure it has the required permissions.',
+        details: error?.message
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
+});
 
 /**
  * Get all repositories for authenticated user
