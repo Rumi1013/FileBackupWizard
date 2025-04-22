@@ -14,6 +14,12 @@ export default function Home() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
+            <Link to="/planner">
+              <Calendar className="h-4 w-4 mr-2" />
+              Planner
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
             <Link to="/recommendations">
               <Sparkles className="h-4 w-4 mr-2" />
               AI Recommendations
