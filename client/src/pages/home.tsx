@@ -2,7 +2,7 @@ import { FileManager } from "@/components/FileManager";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { FileIcon, EyeIcon, Sparkles } from "lucide-react";
+import { FileIcon, EyeIcon, Sparkles, Github, Trash2 } from "lucide-react";
 
 export default function Home() {
   return (
@@ -19,10 +19,16 @@ export default function Home() {
               AI Recommendations
             </Link>
           </Button>
-          <Button asChild>
+          <Button variant="outline" asChild>
             <Link to="/preview">
               <EyeIcon className="h-4 w-4 mr-2" />
               File Preview
+            </Link>
+          </Button>
+          <Button variant="destructive" asChild>
+            <Link to="/github">
+              <Github className="h-4 w-4 mr-2" />
+              GitHub Cleanup
             </Link>
           </Button>
         </div>
@@ -46,6 +52,12 @@ export default function Home() {
                 <Link to="/preview">
                   <FileIcon className="h-4 w-4 mr-2" />
                   Preview Files
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/github">
+                  <Github className="h-4 w-4 mr-2" />
+                  Clean GitHub
                 </Link>
               </Button>
             </div>
