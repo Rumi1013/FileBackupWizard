@@ -19,7 +19,7 @@ EXCLUDED_DIRS = [
 ]
 
 # Set a reasonable recursion depth to avoid scanning too deep
-MAX_DEPTH = 3
+MAX_DEPTH = 5  # Increased from 3 to allow deeper directory access
 
 def is_excluded_path(path):
     """Check if path should be excluded from scanning"""
@@ -31,21 +31,56 @@ def is_excluded_path(path):
 
 def scan_directory(dir_path):
     try:
-        # Normalize the path
+        logger.info(f"Attempting to scan directory: {dir_path}")
+        
+        # Special case for root scan in Replit environment
+        if dir_path == '/' and os.path.exists('/home/runner/workspace'):
+            logger.info("Root path detected, scanning workspace directory instead")
+            dir_path = '/home/runner/workspace'
+        
+        # Safe path resolution with better error handling
         try:
-            dir_path = Path(dir_path).expanduser().resolve()
+            # First attempt to normalize and resolve path
+            path_obj = Path(dir_path)
+            # Handle relative path inputs
+            if not os.path.isabs(dir_path):
+                path_obj = Path(os.path.abspath(dir_path))
+            
+            # Expand user directory if present (e.g., ~/Documents)
+            path_obj = path_obj.expanduser()
+            
+            # Try to resolve the path fully
+            dir_path = path_obj.resolve()
+            
+            logger.info(f"Resolved path to: {dir_path}")
         except Exception as e:
             logger.error(f"Error resolving path {dir_path}: {e}")
-            json.dump({"error": f"Invalid path: {dir_path}"}, sys.stdout)
+            json.dump({
+                "name": os.path.basename(dir_path) if dir_path else "unknown",
+                "path": dir_path,
+                "type": "directory",
+                "children": [],
+                "error": f"Invalid path: {e}",
+                "status": "error"
+            }, sys.stdout)
             return
             
-        # Check if directory exists
+        # Check if directory exists with detailed error
         if not dir_path.exists():
             logger.error(f"Directory not found: {dir_path}")
-            json.dump({"error": f"Directory not found: {dir_path}"}, sys.stdout)
+            parent_exists = dir_path.parent.exists() if hasattr(dir_path, 'parent') else False
+            json.dump({
+                "name": dir_path.name,
+                "path": str(dir_path),
+                "type": "directory",
+                "children": [],
+                "error": f"Directory not found: {dir_path}",
+                "parent_exists": parent_exists,
+                "status": "not_found"
+            }, sys.stdout)
             return
             
-        # Skip excluded directories
+        # Handle excluded directories with more context
         if is_excluded_path(dir_path):
             logger.warning(f"Skipping excluded directory: {dir_path}")
             json.dump({
@@ -53,7 +88,9 @@ def scan_directory(dir_path):
                 "path": str(dir_path),
                 "type": "directory",
                 "children": [],
-                "excluded": True
+                "excluded": True,
+                "status": "excluded",
+                "message": "This directory is excluded for security reasons"
             }, sys.stdout)
             return
 
@@ -130,12 +167,32 @@ def scan_directory(dir_path):
                         children = []
                         # Only scan directory contents if we're not too deep
                         if depth < MAX_DEPTH:
+                            # Add basic directory info
+                            try:
+                                stats = path.stat()
+                                entry["last_modified"] = stats.st_mtime
+                                entry["creation_time"] = stats.st_ctime
+                            except Exception as e:
+                                entry["stat_error"] = str(e)
+                                
+                            # Get all children, including hidden files but marking them
                             for child in path.iterdir():
-                                # Skip hidden files unless explicitly requested
-                                if not child.name.startswith('.'):
+                                include_file = True
+                                
+                                # Track hidden files but don't exclude them completely
+                                if child.name.startswith('.'):
+                                    include_file = True  # Changed from False to True to include hidden files
+                                    
+                                if include_file:
                                     child_entry = create_entry(child, depth + 1)
                                     if child_entry:
+                                        # Mark if it's a hidden file
+                                        if child.name.startswith('.'):
+                                            child_entry["hidden"] = True
                                         children.append(child_entry)
+                                        
+                        # Sort children - directories first, then files
+                        children = sorted(children, key=lambda x: (0 if x["type"] == "directory" else 1, x["name"]))
                         entry["children"] = children
                     except PermissionError as e:
                         logger.warning(f"Permission error reading directory {path}: {e}")
