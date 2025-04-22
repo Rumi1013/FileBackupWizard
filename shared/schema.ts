@@ -367,4 +367,10 @@ export interface FilePreview {
   size: number;
   lastModified: Date;
   metadata?: Record<string, any>;
+  // Extended file properties for enhanced preview
+  permissions?: string;
+  created?: Date;
+  owner?: string;
+  mimetype?: string;
+  encoding?: string;
 }

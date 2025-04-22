@@ -26,7 +26,8 @@ import {
   Table as FileSpreadsheetIcon,
   Presentation,
   CheckCircle,
-  Download
+  Download,
+  ExternalLink
 } from 'lucide-react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -54,7 +55,7 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
   });
   
   // Query for recommendations for this file
-  const { data: recommendations, isLoading: isLoadingRecommendations } = useQuery({
+  const { data: recommendations, isLoading: isLoadingRecommendations } = useQuery<any[]>({
     queryKey: ['/api/recommendations/file', encodeURIComponent(path)],
     enabled: Boolean(path) && showRecommendations,
     refetchOnWindowFocus: false,
@@ -187,6 +188,90 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
             </div>
           );
         }
+      case 'binary':
+        // Show document preview for PDFs or office documents
+        if (['.pdf', '.doc', '.docx', '.ppt', '.pptx'].includes(data.fileType)) {
+          return (
+            <div className="flex flex-col items-center justify-center h-[400px] bg-muted/20 rounded border p-4">
+              <FilePdfIcon className="h-16 w-16 text-red-500 mb-4" />
+              <p className="text-center mb-4">Document preview is available, but requires external viewer</p>
+              <Button 
+                variant="outline" 
+                onClick={() => window.open(`data:application/octet-stream;base64,${data.content}`, '_blank')}
+                className="gap-2"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open in External Viewer
+              </Button>
+            </div>
+          );
+        } else {
+          return (
+            <div className="flex flex-col items-center justify-center h-[400px] bg-muted/20 rounded border">
+              <FileX2Icon className="h-16 w-16 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">This file type doesn't support document preview</p>
+            </div>
+          );
+        }
+      case 'info':
+        // Extended file information and metadata
+        return (
+          <div className="h-[400px] rounded border bg-muted/20 p-6 overflow-y-auto">
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <h3 className="text-md font-medium mb-3 flex items-center">
+                  <InfoIcon className="h-4 w-4 mr-2 text-blue-500" />
+                  File Details
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Full Path</p>
+                    <p className="font-medium break-all">{data.filePath || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Permissions</p>
+                    <p className="font-medium">{data.permissions || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Created</p>
+                    <p className="font-medium">{data.created ? new Date(data.created).toLocaleString() : 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Owner</p>
+                    <p className="font-medium">{data.owner || 'N/A'}</p>
+                  </div>
+                </div>
+                
+                {data.fileType === '.json' && (
+                  <div className="mt-6">
+                    <h3 className="text-md font-medium mb-3">JSON Structure</h3>
+                    <div className="bg-muted p-3 rounded text-xs font-mono">
+                      <pre>{JSON.stringify(JSON.parse(data.content), null, 2)}</pre>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Quick Actions for this file type */}
+                <div className="mt-6">
+                  <h3 className="text-md font-medium mb-3 flex items-center">
+                    <LightbulbIcon className="h-4 w-4 mr-2 text-amber-500" />
+                    Quick Actions
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" className="gap-1">
+                      <Download className="h-3.5 w-3.5" />
+                      Download
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-1">
+                      <LightbulbIcon className="h-3.5 w-3.5" />
+                      Analyze
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
       default:
         return (
           <div className="flex flex-col items-center justify-center h-[400px] bg-muted/20 rounded border">
@@ -203,15 +288,15 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
     
     // Image files
     if (['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg', '.webp'].includes(data.fileType)) {
-      return <ImageIcon className="h-5 w-5" />;
+      return <ImageIcon className="h-5 w-5 text-blue-500" />;
     } 
     // Code files
     else if (isCodeFile(data.fileType)) {
-      return <FileCodeIcon className="h-5 w-5" />;
+      return <FileCodeIcon className="h-5 w-5 text-emerald-500" />;
     } 
     // Text files
     else if (['.txt', '.md', '.rtf', '.log'].includes(data.fileType)) {
-      return <FileTextIcon className="h-5 w-5" />;
+      return <FileTextIcon className="h-5 w-5 text-gray-500" />;
     }
     // Document files
     else if (['.doc', '.docx', '.odt'].includes(data.fileType)) {
@@ -223,7 +308,7 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
     }
     // JSON files
     else if (data.fileType === '.json') {
-      return <FileJsonIcon className="h-5 w-5 text-green-500" />;
+      return <FileJson className="h-5 w-5 text-green-500" />;
     }
     // Spreadsheet files
     else if (['.xls', '.xlsx', '.csv', '.ods'].includes(data.fileType)) {
@@ -231,11 +316,11 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
     }
     // Presentation files
     else if (['.ppt', '.pptx', '.odp'].includes(data.fileType)) {
-      return <FilePresentationIcon className="h-5 w-5 text-orange-500" />;
+      return <Presentation className="h-5 w-5 text-orange-500" />;
     }
     // Video files
     else if (['.mp4', '.mov', '.avi', '.mkv', '.webm', '.wmv', '.flv'].includes(data.fileType)) {
-      return <FileVideo2Icon className="h-5 w-5 text-purple-500" />;
+      return <FileVideoIcon className="h-5 w-5 text-purple-500" />;
     }
     // Audio files
     else if (['.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a'].includes(data.fileType)) {
@@ -247,7 +332,7 @@ export function FilePreview({ filePath, fileId }: FilePreviewProps) {
     }
     // Default for unknown file types
     else {
-      return <FileIcon className="h-5 w-5" />;
+      return <FileIcon className="h-5 w-5 text-gray-400" />;
     }
   };
 
