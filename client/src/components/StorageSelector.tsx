@@ -183,6 +183,13 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
     if (provider.connected && provider.basePath) {
       setActiveTab(provider.id);
       setBrowserPath(provider.basePath);
+      
+      // Reset search and selection when changing providers
+      setSearchQuery('');
+      setSelectedFile(null);
+      
+      // Log the selection for debugging
+      console.log(`Selected provider: ${provider.name}, path: ${provider.basePath}`);
     } else {
       // In a real app, this would trigger an authentication flow
       console.log(`Connect to ${provider.name} first`);
@@ -192,21 +199,57 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
   function handleCustomPathSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (customPath) {
-      setBrowserPath(customPath);
+      // Log for debugging
+      console.log(`Custom path entered: ${customPath}`);
+      
+      // Handle Mac-specific paths in custom input
+      if (customPath.toLowerCase().includes('downloads')) {
+        handleNavigate('downloads');
+      } else if (customPath.toLowerCase().includes('documents')) {
+        handleNavigate('documents');
+      } else if (customPath.toLowerCase().includes('pictures')) {
+        handleNavigate('pictures');
+      } else if (customPath.startsWith('~/')) {
+        handleNavigate('~');
+      } else {
+        setBrowserPath(customPath);
+      }
+      
       setCustomPath('');
     }
   }
 
   function handleNavigate(path: string) {
-    setBrowserPath(path);
+    // Log the navigation for debugging
+    console.log(`Navigating to: ${path}`);
+    
+    // Normalize the path to prevent errors
+    let normalizedPath = path;
+    
+    // Handle special cases for Mac-specific paths
+    if (path.includes('~/Downloads') || path === 'downloads') {
+      normalizedPath = 'downloads';
+    } else if (path.includes('~/Documents') || path === 'documents') {
+      normalizedPath = 'documents';
+    } else if (path.includes('~/Pictures') || path === 'pictures') {
+      normalizedPath = 'pictures';
+    }
+    
+    setBrowserPath(normalizedPath);
     setSelectedFile(null);
   }
 
   function handleParentDirectory() {
+    // Special case handling for Mac directories
+    if (browserPath === 'downloads' || browserPath === 'documents' || browserPath === 'pictures') {
+      handleNavigate('~');
+      return;
+    }
+    
     const parts = browserPath.split('/').filter(Boolean);
     if (parts.length > 0) {
       parts.pop();
-      const parentPath = '/' + parts.join('/');
+      const parentPath = parts.length > 0 ? '/' + parts.join('/') : '/';
       handleNavigate(parentPath);
     } else {
       handleNavigate('/');
@@ -214,8 +257,20 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
   }
 
   function handleDirectorySelect(entry: DirectoryEntry) {
+    // Log the selection for debugging
+    console.log(`Selected entry: ${entry.name}, type: ${entry.type}, path: ${entry.path}`);
+    
     if (entry.type === 'directory') {
-      handleNavigate(entry.path);
+      // Handle potential special paths before navigation
+      if (entry.path.includes('Downloads')) {
+        handleNavigate('downloads');
+      } else if (entry.path.includes('Documents')) {
+        handleNavigate('documents');
+      } else if (entry.path.includes('Pictures')) {
+        handleNavigate('pictures');
+      } else {
+        handleNavigate(entry.path);
+      }
     } else {
       setSelectedFile(entry.path);
     }

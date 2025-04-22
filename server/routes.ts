@@ -68,8 +68,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         '~': process.env.HOME || '/home/runner',
         'home': '/home/runner',
         'workspace': '/home/runner/workspace',
-        'midnight-magnolia': '/home/runner/workspace/midnight-magnolia'
+        'midnight-magnolia': '/home/runner/workspace/midnight-magnolia',
+        // Mac-specific folder shortcuts
+        'downloads': path.join(process.env.HOME || '/home/runner', 'Downloads'),
+        'documents': path.join(process.env.HOME || '/home/runner', 'Documents'),
+        'pictures': path.join(process.env.HOME || '/home/runner', 'Pictures'),
       };
+      
+      // Log the requested path for debugging
+      console.log(`Path requested: ${dirPath}`);
       
       // Handle special path shortcuts
       if (dirPath && specialPaths.hasOwnProperty(dirPath)) {
@@ -95,17 +102,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Handle macOS specific paths
-      else if (dirPath && dirPath.includes('~/Downloads')) {
+      else if (dirPath && dirPath.includes('downloads')) {
         const homePath = process.env.HOME || '/home/runner';
         dirPath = path.join(homePath, 'Downloads');
         console.log(`MacOS Downloads path: ${dirPath}`);
       }
-      else if (dirPath && dirPath.includes('~/Documents')) {
+      else if (dirPath && dirPath.includes('documents')) {
         const homePath = process.env.HOME || '/home/runner';
         dirPath = path.join(homePath, 'Documents');
         console.log(`MacOS Documents path: ${dirPath}`);
       }
-      else if (dirPath && dirPath.includes('~/Pictures')) {
+      else if (dirPath && dirPath.includes('pictures')) {
         const homePath = process.env.HOME || '/home/runner';
         dirPath = path.join(homePath, 'Pictures');
         console.log(`MacOS Pictures path: ${dirPath}`);
