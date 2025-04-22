@@ -5,6 +5,7 @@ import { LogViewer } from "./LogViewer";
 import { FileAssessment } from "./FileAssessment";
 import { ExternalServices } from "./ExternalServices";
 import StorageSelector from "./StorageSelector";
+import FileTags from "./FileTags";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -1027,9 +1028,30 @@ export function FileManager() {
           </Card>
         </div>
 
-        {/* Right Panel: File Assessment & External Services */}
+        {/* Right Panel: File Assessment, Tags, & External Services */}
         <div className="space-y-4">
           <FileAssessment filePath={selectedFile} />
+          
+          {selectedFile && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Tag className="h-4 w-4 mr-2" />
+                  File Tags
+                </CardTitle>
+                <CardDescription>
+                  Organize files with emoji-based tags
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FileTags 
+                  fileId={selectedFile} 
+                  showAddButton={true}
+                  onTagsChanged={() => refetch()}
+                />
+              </CardContent>
+            </Card>
+          )}
           
           <ExternalServices 
             onNavigate={(path) => setCurrentPath(path)}

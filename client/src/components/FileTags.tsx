@@ -71,7 +71,7 @@ export function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTa
   const { data: allTags, isLoading: isLoadingAllTags } = useQuery({
     queryKey: ['/api/tags'],
     queryFn: async () => {
-      const response = await apiRequest('/api/tags');
+      const response = await apiRequest('GET', '/api/tags');
       return response.data || [];
     }
   });
@@ -84,7 +84,7 @@ export function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTa
     queryKey: ['/api/tags/file', fileId],
     queryFn: async () => {
       if (!fileId) return [];
-      const response = await apiRequest(`/api/tags/file/${fileId}`);
+      const response = await apiRequest('GET', `/api/tags/file/${fileId}`);
       return response.data || [];
     },
     enabled: !!fileId
@@ -93,10 +93,7 @@ export function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTa
   // Create a new tag
   const createTagMutation = useMutation({
     mutationFn: async (newTag: Omit<FileTag, 'id' | 'createdAt'>) => {
-      return await apiRequest('/api/tags', {
-        method: 'POST',
-        data: newTag
-      });
+      return await apiRequest('POST', '/api/tags', newTag);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
@@ -120,10 +117,7 @@ export function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTa
   // Update existing tag
   const updateTagMutation = useMutation({
     mutationFn: async ({ id, tag }: { id: string, tag: Partial<Omit<FileTag, 'id' | 'createdAt'>> }) => {
-      return await apiRequest(`/api/tags/${id}`, {
-        method: 'PATCH',
-        data: tag
-      });
+      return await apiRequest('PATCH', `/api/tags/${id}`, tag);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
@@ -151,9 +145,7 @@ export function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTa
   // Delete a tag
   const deleteTagMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/tags/${id}`, {
-        method: 'DELETE'
-      });
+      return await apiRequest('DELETE', `/api/tags/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/tags'] });
@@ -178,10 +170,7 @@ export function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTa
   // Add tag to file
   const addTagToFileMutation = useMutation({
     mutationFn: async ({ fileId, tagId }: { fileId: string, tagId: string }) => {
-      return await apiRequest('/api/tags/map', {
-        method: 'POST',
-        data: { fileId, tagId }
-      });
+      return await apiRequest('POST', '/api/tags/map', { fileId, tagId });
     },
     onSuccess: () => {
       if (fileId) {
@@ -205,9 +194,7 @@ export function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTa
   // Remove tag from file
   const removeTagFromFileMutation = useMutation({
     mutationFn: async ({ fileId, tagId }: { fileId: string, tagId: string }) => {
-      return await apiRequest(`/api/tags/map/${fileId}/${tagId}`, {
-        method: 'DELETE'
-      });
+      return await apiRequest('DELETE', `/api/tags/map/${fileId}/${tagId}`);
     },
     onSuccess: () => {
       if (fileId) {
