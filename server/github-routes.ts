@@ -9,9 +9,10 @@ const router = Router();
  */
 router.get('/repos', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const token = await getGitHubToken();
-    
-    if (!token) {
+    let token: string;
+    try {
+      token = await getGitHubToken();
+    } catch (err) {
       return res.status(401).json({ error: 'No GitHub token found. Please authenticate first.' });
     }
     
@@ -45,9 +46,10 @@ router.get('/repos', async (req: Request, res: Response, next: NextFunction) => 
 router.get('/repos/:owner/:repo/usage', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { owner, repo } = req.params;
-    const token = await getGitHubToken();
-    
-    if (!token) {
+    let token: string;
+    try {
+      token = await getGitHubToken();
+    } catch (err) {
       return res.status(401).json({ error: 'No GitHub token found. Please authenticate first.' });
     }
     
@@ -65,9 +67,10 @@ router.get('/repos/:owner/:repo/usage', async (req: Request, res: Response, next
 router.post('/repos/:owner/:repo/archive', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { owner, repo } = req.params;
-    const token = await getGitHubToken();
-    
-    if (!token) {
+    let token: string;
+    try {
+      token = await getGitHubToken();
+    } catch (err) {
       return res.status(401).json({ error: 'No GitHub token found. Please authenticate first.' });
     }
     
@@ -85,9 +88,10 @@ router.post('/repos/:owner/:repo/archive', async (req: Request, res: Response, n
 router.delete('/repos/:owner/:repo', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { owner, repo } = req.params;
-    const token = await getGitHubToken();
-    
-    if (!token) {
+    let token: string;
+    try {
+      token = await getGitHubToken();
+    } catch (err) {
       return res.status(401).json({ error: 'No GitHub token found. Please authenticate first.' });
     }
     
@@ -106,9 +110,10 @@ router.delete('/repos/:owner/:repo', async (req: Request, res: Response, next: N
 router.post('/repos/batch-archive', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { repositories } = req.body;
-    const token = await getGitHubToken();
-    
-    if (!token) {
+    let token: string;
+    try {
+      token = await getGitHubToken();
+    } catch (err) {
       return res.status(401).json({ error: 'No GitHub token found. Please authenticate first.' });
     }
     
@@ -122,8 +127,13 @@ router.post('/repos/batch-archive', async (req: Request, res: Response, next: Ne
       try {
         const success = await archiveRepository(token, owner, repo);
         results.push({ owner, repo, success, message: `Repository ${owner}/${repo} has been archived.` });
-      } catch (error) {
-        results.push({ owner, repo, success: false, message: `Failed to archive ${owner}/${repo}: ${error.message}` });
+      } catch (error: any) {
+        results.push({ 
+          owner, 
+          repo, 
+          success: false, 
+          message: `Failed to archive ${owner}/${repo}: ${error?.message || 'Unknown error'}`
+        });
       }
     }
     
@@ -141,9 +151,10 @@ router.post('/repos/batch-archive', async (req: Request, res: Response, next: Ne
 router.post('/repos/batch-delete', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { repositories } = req.body;
-    const token = await getGitHubToken();
-    
-    if (!token) {
+    let token: string;
+    try {
+      token = await getGitHubToken();
+    } catch (err) {
       return res.status(401).json({ error: 'No GitHub token found. Please authenticate first.' });
     }
     
@@ -157,8 +168,13 @@ router.post('/repos/batch-delete', async (req: Request, res: Response, next: Nex
       try {
         const success = await deleteRepository(token, owner, repo);
         results.push({ owner, repo, success, message: `Repository ${owner}/${repo} has been deleted.` });
-      } catch (error) {
-        results.push({ owner, repo, success: false, message: `Failed to delete ${owner}/${repo}: ${error.message}` });
+      } catch (error: any) {
+        results.push({ 
+          owner, 
+          repo, 
+          success: false, 
+          message: `Failed to delete ${owner}/${repo}: ${error?.message || 'Unknown error'}`
+        });
       }
     }
     

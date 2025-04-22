@@ -7,7 +7,7 @@ interface Repository {
   description: string | null;
   created_at: string;
   updated_at: string;
-  pushed_at: string;
+  pushed_at: string | null;
   size: number;
   stargazers_count: number;
   watchers_count: number;
@@ -18,14 +18,18 @@ interface Repository {
   license: string | null;
   visibility: string;
   default_branch: string;
-  last_activity_date?: Date;
+  last_activity_date: Date;
   activity_score?: number;
   usage_status?: 'active' | 'inactive' | 'dormant';
 }
 
-export async function getGitHubToken(): Promise<string | null> {
+export async function getGitHubToken(): Promise<string> {
   // In a real application, this would be retrieved from a secure store or environment variable
-  return process.env.GITHUB_TOKEN || null;
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) {
+    throw new Error('GitHub token not found in environment variables');
+  }
+  return token;
 }
 
 export async function listUserRepositories(token: string): Promise<Repository[]> {
@@ -49,7 +53,7 @@ export async function listUserRepositories(token: string): Promise<Repository[]>
         id: repo.id,
         name: repo.name,
         full_name: repo.full_name,
-        description: repo.description,
+        description: repo.description || null,
         created_at: repo.created_at,
         updated_at: repo.updated_at,
         pushed_at: repo.pushed_at,
@@ -61,9 +65,9 @@ export async function listUserRepositories(token: string): Promise<Repository[]>
         disabled: repo.disabled,
         open_issues_count: repo.open_issues_count,
         license: repo.license?.name || null,
-        visibility: repo.visibility,
-        default_branch: repo.default_branch,
-        last_activity_date: new Date(repo.pushed_at)
+        visibility: repo.visibility || 'private',
+        default_branch: repo.default_branch || 'main',
+        last_activity_date: new Date(repo.pushed_at || Date.now())
       };
       
       // Calculate activity score based on recent activity, stars, forks, etc.

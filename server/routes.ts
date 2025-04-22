@@ -808,6 +808,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register file preview routes
   app.use('/api/previews', previewRoutes);
+  
+  // Register GitHub repository management routes
+  app.use('/api/github', githubRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
