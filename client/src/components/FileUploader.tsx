@@ -62,11 +62,18 @@ export function FileUploader({ onUploadComplete, currentDirectory }: FileUploade
 
   const uploadFile = async (file: File) => {
     try {
+      if (!file) return;
       setProgress(10);
       await uploadMutation.mutateAsync(file);
       setProgress(100);
     } catch (error) {
       console.error('Upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
+      setProgress(0);
     }
   };
 

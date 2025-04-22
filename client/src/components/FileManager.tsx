@@ -737,13 +737,10 @@ export function FileManager() {
             </CardContent>
           </Card>
 
-          {/* Hidden file uploader - triggered by the Upload button */}
-          <div className="hidden">
-            <FileUploader 
-              currentDirectory={currentPath}
-              onUploadComplete={handleUploadComplete}
-            />
-          </div>
+          <FileUploader 
+            currentDirectory={currentPath}
+            onUploadComplete={handleUploadComplete}
+          />
 
           {(isLoading || scanMutation.isPending) && (
             <Progress value={30} className="w-full" />
