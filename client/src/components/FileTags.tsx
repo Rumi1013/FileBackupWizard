@@ -42,6 +42,24 @@ import {
 } from "@/components/ui/popover";
 import { Pencil, Trash2, Tag, Plus, Search, Filter, SmilePlus } from 'lucide-react';
 
+// Helper function to determine if a color is dark (for text contrast)
+const isDarkColor = (hexColor: string): boolean => {
+  // Remove the # if present
+  const hex = hexColor.replace('#', '');
+  
+  // Convert hex to RGB
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  // Calculate luminance (perceived brightness)
+  // Using the formula: 0.299*R + 0.587*G + 0.114*B
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  
+  // If luminance is less than 0.5, the color is considered dark
+  return luminance < 0.5;
+};
+
 // Type definitions for tags
 export interface FileTag {
   id: string;
@@ -82,8 +100,13 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
   const { data: allTags, isLoading: isLoadingAllTags } = useQuery<FileTag[]>({
     queryKey: ['/api/tags'],
     queryFn: async () => {
-      const response = await apiRequest('GET', '/api/tags');
-      return response || [];
+      try {
+        const response = await apiRequest('GET', '/api/tags');
+        return response.data || [];
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+        return [];
+      }
     }
   });
 
@@ -95,8 +118,13 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
     queryKey: ['/api/tags/file', fileId],
     queryFn: async () => {
       if (!fileId) return [];
-      const response = await apiRequest('GET', `/api/tags/file/${fileId}`);
-      return response || [];
+      try {
+        const response = await apiRequest('GET', `/api/tags/file/${fileId}`);
+        return response.data || [];
+      } catch (error) {
+        console.error('Error fetching file tags:', error);
+        return [];
+      }
     },
     enabled: !!fileId
   });
@@ -361,6 +389,54 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
             {fileId ? 'Available Tags' : 'All Tags'}
           </h3>
           
+          {/* Search and Filter Controls */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-8 w-[150px] text-sm"
+              />
+            </div>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 px-2 gap-1">
+                  <Filter className="h-4 w-4" />
+                  <span className="sr-only md:not-sr-only md:inline-block">Filter</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-0" align="end">
+                <div className="p-2">
+                  <div className="font-medium text-sm mb-2">Filter by Category</div>
+                  <div className="space-y-1">
+                    <Button 
+                      variant={selectedCategory === null ? "default" : "outline"}
+                      size="sm"
+                      className="w-full justify-start text-left"
+                      onClick={() => setSelectedCategory(null)}
+                    >
+                      All Categories
+                    </Button>
+                    {Object.keys(commonEmojis).map(category => (
+                      <Button 
+                        key={category}
+                        variant={selectedCategory === category ? "default" : "outline"}
+                        size="sm"
+                        className="w-full justify-start text-left"
+                        onClick={() => setSelectedCategory(category)}
+                      >
+                        {category}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+          
           {showAddButton && (
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
@@ -592,21 +668,6 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
   );
 }
 
-// Helper function to determine if a color is dark (to set text color accordingly)
-function isDarkColor(hexColor: string): boolean {
-  // Remove # if present
-  hexColor = hexColor.replace('#', '');
-  
-  // Parse the color
-  const r = parseInt(hexColor.substr(0, 2), 16);
-  const g = parseInt(hexColor.substr(2, 2), 16);
-  const b = parseInt(hexColor.substr(4, 2), 16);
-  
-  // Calculate brightness (YIQ equation)
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  
-  // Return true if color is dark
-  return brightness < 128;
-}
+
 
 export { FileTags };
