@@ -1017,6 +1017,161 @@ export class MemStorage implements IStorage {
     // Use the file path to generate a preview
     return this.getFilePreview(fileOp.targetPath, previewType);
   }
+  
+  // File tag methods (emoji-based tagging system)
+  async createFileTag(tag: InsertFileTag): Promise<FileTag> {
+    const id = crypto.randomUUID();
+    const newTag: FileTag = {
+      id,
+      ...tag,
+      createdAt: new Date()
+    };
+    
+    this.fileTags.set(id, newTag);
+    return newTag;
+  }
+  
+  async getFileTags(): Promise<FileTag[]> {
+    return Array.from(this.fileTags.values());
+  }
+  
+  async getFileTag(id: string): Promise<FileTag | undefined> {
+    return this.fileTags.get(id);
+  }
+  
+  async updateFileTag(id: string, tag: Partial<InsertFileTag>): Promise<FileTag> {
+    const existingTag = this.fileTags.get(id);
+    if (!existingTag) {
+      throw new Error(`Tag with ID ${id} not found`);
+    }
+    
+    const updatedTag = {
+      ...existingTag,
+      ...tag
+    };
+    
+    this.fileTags.set(id, updatedTag);
+    return updatedTag;
+  }
+  
+  async deleteFileTag(id: string): Promise<boolean> {
+    if (!this.fileTags.has(id)) {
+      return false;
+    }
+    
+    // Remove the tag
+    this.fileTags.delete(id);
+    
+    // Remove all mappings with this tag
+    for (const [mappingId, mapping] of this.fileTagMappings.entries()) {
+      if (mapping.tagId === id) {
+        this.fileTagMappings.delete(mappingId);
+      }
+    }
+    
+    return true;
+  }
+  
+  // File tag mapping methods
+  async addTagToFile(mapping: InsertFileTagMapping): Promise<FileTagMapping> {
+    // Validate file and tag exist
+    const fileOperations = Array.from(this.fileOps.values());
+    const fileExists = fileOperations.some(op => op.id.toString() === mapping.fileId);
+    
+    if (!fileExists) {
+      throw new Error(`File with ID ${mapping.fileId} not found`);
+    }
+    
+    const tag = await this.getFileTag(mapping.tagId);
+    if (!tag) {
+      throw new Error(`Tag with ID ${mapping.tagId} not found`);
+    }
+    
+    // Check if mapping already exists to avoid duplicates
+    const existingMapping = Array.from(this.fileTagMappings.values()).find(
+      m => m.fileId === mapping.fileId && m.tagId === mapping.tagId
+    );
+    
+    if (existingMapping) {
+      return existingMapping;
+    }
+    
+    // Create new mapping
+    const id = crypto.randomUUID();
+    const tagMapping: FileTagMapping = {
+      id,
+      ...mapping,
+      createdAt: new Date()
+    };
+    
+    this.fileTagMappings.set(id, tagMapping);
+    return tagMapping;
+  }
+  
+  async removeTagFromFile(fileId: string, tagId: string): Promise<boolean> {
+    let found = false;
+    
+    for (const [mappingId, mapping] of this.fileTagMappings.entries()) {
+      if (mapping.fileId === fileId && mapping.tagId === tagId) {
+        this.fileTagMappings.delete(mappingId);
+        found = true;
+      }
+    }
+    
+    return found;
+  }
+  
+  async getFilesWithTag(tagId: string): Promise<MMFile[]> {
+    // Find all mappings with this tag
+    const mappingsWithTag = Array.from(this.fileTagMappings.values())
+      .filter(mapping => mapping.tagId === tagId);
+    
+    // Get all unique file IDs
+    const fileIds = [...new Set(mappingsWithTag.map(mapping => mapping.fileId))];
+    
+    // Get the files
+    const files: MMFile[] = [];
+    for (const fileId of fileIds) {
+      // In memory implementation - we don't have actual MMFile objects
+      // This is a stub that would be populated properly in the DB implementation
+      const fileOp = Array.from(this.fileOps.values()).find(op => op.id.toString() === fileId);
+      if (fileOp) {
+        const mmFile: MMFile = {
+          id: fileId,
+          name: path.basename(fileOp.targetPath || "unknown"),
+          path: fileOp.targetPath || "",
+          type: path.extname(fileOp.targetPath || "").toLowerCase(),
+          size: 0, // Would be actual file size in DB implementation
+          createdAt: fileOp.timestamp,
+          updatedAt: fileOp.timestamp,
+          metadata: {}
+        };
+        files.push(mmFile);
+      }
+    }
+    
+    return files;
+  }
+  
+  async getTagsForFile(fileId: string): Promise<FileTag[]> {
+    // Find all mappings for this file
+    const mappingsForFile = Array.from(this.fileTagMappings.values())
+      .filter(mapping => mapping.fileId === fileId);
+    
+    // Get all unique tag IDs
+    const tagIds = [...new Set(mappingsForFile.map(mapping => mapping.tagId))];
+    
+    // Get the tags
+    const tags: FileTag[] = [];
+    for (const tagId of tagIds) {
+      const tag = await this.getFileTag(tagId);
+      if (tag) {
+        tags.push(tag);
+      }
+    }
+    
+    return tags;
+  }
 }
 
 export const storage = new MemStorage();
@@ -1994,6 +2149,75 @@ export class DatabaseStorage implements IStorage {
   private async getMMFileByPath(filePath: string): Promise<MMFile | undefined> {
     const [file] = await db.select().from(mmFiles).where(eq(mmFiles.path, filePath));
     return file;
+  }
+  
+  // File tag methods (emoji-based tagging system)
+  async createFileTag(tag: InsertFileTag): Promise<FileTag> {
+    // Create a new tag with a random UUID
+    const id = crypto.randomUUID();
+    const now = new Date();
+    
+    // TODO: Implement DB-based storage when migrating to PostgreSQL
+    // This would be replaced with a proper DB insert
+    return {
+      id,
+      ...tag,
+      createdAt: now
+    };
+  }
+  
+  async getFileTags(): Promise<FileTag[]> {
+    // TODO: Implement DB-based storage when migrating to PostgreSQL
+    // This would be replaced with a proper DB query to get all tags
+    return [];
+  }
+  
+  async getFileTag(id: string): Promise<FileTag | undefined> {
+    // TODO: Implement DB-based storage when migrating to PostgreSQL
+    // This would be replaced with a proper DB query to get a tag by ID
+    return undefined;
+  }
+  
+  async updateFileTag(id: string, tag: Partial<InsertFileTag>): Promise<FileTag> {
+    // TODO: Implement DB-based storage when migrating to PostgreSQL
+    // This would be replaced with a proper DB update
+    throw new Error("Method not implemented in database storage yet");
+  }
+  
+  async deleteFileTag(id: string): Promise<boolean> {
+    // TODO: Implement DB-based storage when migrating to PostgreSQL
+    // This would be replaced with a proper DB delete
+    return false;
+  }
+  
+  // File tag mapping methods
+  async addTagToFile(mapping: InsertFileTagMapping): Promise<FileTagMapping> {
+    // TODO: Implement DB-based storage when migrating to PostgreSQL
+    // This would be replaced with a proper DB insert
+    const id = crypto.randomUUID();
+    return {
+      id,
+      ...mapping,
+      createdAt: new Date()
+    };
+  }
+  
+  async removeTagFromFile(fileId: string, tagId: string): Promise<boolean> {
+    // TODO: Implement DB-based storage when migrating to PostgreSQL
+    // This would be replaced with a proper DB delete
+    return false;
+  }
+  
+  async getFilesWithTag(tagId: string): Promise<MMFile[]> {
+    // TODO: Implement DB-based storage when migrating to PostgreSQL
+    // This would be replaced with a proper DB query
+    return [];
+  }
+  
+  async getTagsForFile(fileId: string): Promise<FileTag[]> {
+    // TODO: Implement DB-based storage when migrating to PostgreSQL
+    // This would be replaced with a proper DB query
+    return [];
   }
 }
 
