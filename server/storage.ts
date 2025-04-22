@@ -32,6 +32,35 @@ import { db } from './db';
 import { eq, asc, desc } from 'drizzle-orm';
 import crypto from 'crypto';
 
+// File tag interfaces for the emoji tagging system
+export interface FileTag {
+  id: string;
+  name: string; 
+  emoji: string;
+  color: string;
+  description?: string;
+  createdAt: Date;
+}
+
+export interface FileTagMapping {
+  id: string;
+  fileId: string;
+  tagId: string;
+  createdAt: Date;
+}
+
+export interface InsertFileTag {
+  name: string;
+  emoji: string;
+  color: string;
+  description?: string;
+}
+
+export interface InsertFileTagMapping {
+  fileId: string;
+  tagId: string;
+}
+
 export interface IStorage {
   addFileOperation(operation: InsertFileOperation): Promise<FileOperation>;
   getFileOperations(): Promise<FileOperation[]>;
@@ -56,6 +85,19 @@ export interface IStorage {
   // File preview methods
   getFilePreview(filePath: string, previewType?: string): Promise<FilePreview>;
   getFilePreviewById(fileId: string, previewType?: string): Promise<FilePreview>;
+  
+  // File tag methods (emoji-based tagging system)
+  createFileTag(tag: InsertFileTag): Promise<FileTag>;
+  getFileTags(): Promise<FileTag[]>;
+  getFileTag(id: string): Promise<FileTag | undefined>;
+  updateFileTag(id: string, tag: Partial<InsertFileTag>): Promise<FileTag>;
+  deleteFileTag(id: string): Promise<boolean>;
+  
+  // File tag mapping methods
+  addTagToFile(mapping: InsertFileTagMapping): Promise<FileTagMapping>;
+  removeTagFromFile(fileId: string, tagId: string): Promise<boolean>;
+  getFilesWithTag(tagId: string): Promise<MMFile[]>;
+  getTagsForFile(fileId: string): Promise<FileTag[]>;
 }
 
 const VALID_FILE_TYPES = [
@@ -112,6 +154,8 @@ export class MemStorage implements IStorage {
   private dailyReports: Map<number, DailyReport>;
   private fileRecommendations: Map<string, FileRecommendationType>;
   private recommendationFeedbacks: Map<string, RecommendationFeedbackType>;
+  private fileTags: Map<string, FileTag>;
+  private fileTagMappings: Map<string, FileTagMapping>;
   private currentFileOpId: number;
   private currentLogId: number;
   private currentAnalysisId: number;
@@ -126,11 +170,40 @@ export class MemStorage implements IStorage {
     this.dailyReports = new Map();
     this.fileRecommendations = new Map();
     this.recommendationFeedbacks = new Map();
+    this.fileTags = new Map();
+    this.fileTagMappings = new Map();
     this.currentFileOpId = 1;
     this.currentLogId = 1;
     this.currentAnalysisId = 1;
     this.currentAssessmentId = 1;
     this.currentReportId = 1;
+    
+    // Initialize with some default emoji tags
+    this.initializeDefaultTags();
+  }
+  
+  private initializeDefaultTags() {
+    const defaultTags: InsertFileTag[] = [
+      { name: "Important", emoji: "⭐", color: "#FFD700", description: "High priority files" },
+      { name: "Archived", emoji: "🗄️", color: "#A9A9A9", description: "Archived or stored for reference" },
+      { name: "Draft", emoji: "📝", color: "#87CEEB", description: "Work in progress" },
+      { name: "Final", emoji: "✅", color: "#32CD32", description: "Completed and approved files" },
+      { name: "Review", emoji: "👁️", color: "#FF7F50", description: "Needs review or feedback" },
+      { name: "Client", emoji: "👥", color: "#9370DB", description: "Client-related files" },
+      { name: "Creative", emoji: "🎨", color: "#FF69B4", description: "Creative assets and designs" },
+      { name: "Code", emoji: "💻", color: "#4169E1", description: "Programming files" },
+      { name: "Document", emoji: "📄", color: "#20B2AA", description: "Text documents" },
+      { name: "Financial", emoji: "💰", color: "#228B22", description: "Financial documents" }
+    ];
+    
+    defaultTags.forEach(tag => {
+      const id = crypto.randomUUID();
+      this.fileTags.set(id, {
+        id,
+        ...tag,
+        createdAt: new Date()
+      });
+    });
   }
 
   isValidFileType(filename: string): boolean {
