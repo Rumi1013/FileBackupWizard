@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import PreviewPage from "./pages/PreviewPage";
 import RecommendationsPage from "./pages/RecommendationsPage";
+import GitHubPage from "./pages/GitHubPage";
 
 function Router() {
   return (
@@ -13,6 +14,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/preview" component={PreviewPage} />
       <Route path="/recommendations" component={RecommendationsPage} />
+      <Route path="/github" component={GitHubPage} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -9,10 +9,10 @@ import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { Switch } from './ui/switch';
 import { Label } from './ui/label';
-import { AlertCircle, Archive, Clock, ExternalLink, Github, Star, GitFork, Info, AlertTriangle, Trash2, Users } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { queryClient } from '@/lib/queryClient';
-import { apiRequest } from '@/lib/apiRequest';
+import { AlertCircle, Archive, Clock, ExternalLink, Github, Star, GitFork, Info, AlertTriangle, Trash2, Users, RefreshCw } from 'lucide-react';
+import { useToast } from '../hooks/use-toast';
+import { queryClient } from '../lib/queryClient';
+import { apiRequest } from '../lib/apiRequest';
 
 type Repository = {
   id: number;
