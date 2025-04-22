@@ -19,7 +19,9 @@ import {
   FileText,
   SquareCode,
   FileImage,
-  Database
+  Database,
+  Github,
+  CloudCog
 } from "lucide-react";
 
 interface ExternalServicesProps {
@@ -32,6 +34,10 @@ export function ExternalServices({ onNavigate, onImport, onConnect }: ExternalSe
   const [authCode, setAuthCode] = useState("");
   const [customPath, setCustomPath] = useState("");
   const { toast } = useToast();
+  
+  const navigateToGitHub = () => {
+    window.location.href = "/github";
+  };
 
   const handleConnect = (service: string) => {
     // In a real implementation, we would redirect to OAuth flow
@@ -139,6 +145,48 @@ export function ExternalServices({ onNavigate, onImport, onConnect }: ExternalSe
                 <CardHeader className="p-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-sm font-medium flex items-center">
+                      <Github className="h-5 w-5 mr-2 text-slate-800" />
+                      GitHub Repos
+                    </CardTitle>
+                    <Button size="sm" variant="ghost">
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardFooter className="p-4 pt-0 flex justify-between">
+                  <span className="text-xs text-muted-foreground">Repository Manager</span>
+                  <Button variant="outline" size="sm" onClick={navigateToGitHub}>
+                    <ChevronRight className="h-3 w-3 mr-1" />
+                    Open
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <CardHeader className="p-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium flex items-center">
+                      <CloudCog className="h-5 w-5 mr-2 text-orange-500" />
+                      Cloudflare
+                    </CardTitle>
+                    <Button size="sm" variant="ghost">
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardFooter className="p-4 pt-0 flex justify-between">
+                  <span className="text-xs text-muted-foreground">Not connected</span>
+                  <Button variant="outline" size="sm" onClick={() => handleConnect("Cloudflare")}>
+                    <LogIn className="h-3 w-3 mr-1" />
+                    Connect
+                  </Button>
+                </CardFooter>
+              </Card>
+
+              <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                <CardHeader className="p-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium flex items-center">
                       <Cloud className="h-5 w-5 mr-2 text-blue-600" />
                       Dropbox
                     </CardTitle>
@@ -232,6 +280,14 @@ export function ExternalServices({ onNavigate, onImport, onConnect }: ExternalSe
               />
             </div>
             <div className="grid grid-cols-2 gap-2 mt-4">
+              <Button onClick={() => handleAuthCodeSubmit("GitHub")}>
+                <Github className="h-4 w-4 mr-2" />
+                Connect GitHub
+              </Button>
+              <Button onClick={() => handleAuthCodeSubmit("Cloudflare")}>
+                <CloudCog className="h-4 w-4 mr-2" />
+                Connect Cloudflare
+              </Button>
               <Button onClick={() => handleAuthCodeSubmit("Dropbox")}>
                 <Cloud className="h-4 w-4 mr-2" />
                 Connect Dropbox

@@ -66,7 +66,10 @@ export default function GitHubRepositoryManager() {
     mutationFn: async (repositories: { owner: string; repo: string }[]) => {
       return apiRequest('/api/github/repos/batch-archive', {
         method: 'POST',
-        body: { repositories },
+        body: JSON.stringify({ repositories }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
     },
     onSuccess: () => {
@@ -91,7 +94,10 @@ export default function GitHubRepositoryManager() {
     mutationFn: async (repositories: { owner: string; repo: string }[]) => {
       return apiRequest('/api/github/repos/batch-delete', {
         method: 'POST',
-        body: { repositories },
+        body: JSON.stringify({ repositories }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
     },
     onSuccess: () => {
