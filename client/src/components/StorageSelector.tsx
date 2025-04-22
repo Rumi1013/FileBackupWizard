@@ -119,6 +119,30 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
     },
     {
       id: 'local',
+      name: 'Downloads',
+      icon: <FolderOpen className="h-5 w-5" />,
+      basePath: '~/Downloads',
+      description: 'Access your Downloads folder',
+      connected: true
+    },
+    {
+      id: 'local',
+      name: 'Documents',
+      icon: <FileIcon className="h-5 w-5" />,
+      basePath: '~/Documents',
+      description: 'Access your Documents folder',
+      connected: true
+    },
+    {
+      id: 'local',
+      name: 'Pictures',
+      icon: <FolderOpen className="h-5 w-5" />,
+      basePath: '~/Pictures',
+      description: 'Access your Pictures folder',
+      connected: true
+    },
+    {
+      id: 'local',
       name: 'Workspace',
       icon: <FolderOpen className="h-5 w-5" />,
       basePath: '/workspace',

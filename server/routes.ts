@@ -82,6 +82,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      // Handle home directory expansion paths with tilde (~)
+      else if (dirPath && dirPath.startsWith('~/')) {
+        const homePath = process.env.HOME || '/home/runner';
+        dirPath = path.join(homePath, dirPath.substring(2));
+        console.log(`Expanding home directory path to: ${dirPath}`);
+        
+        await storage.addLog({
+          level: 'info',
+          message: `Expanded home directory path to: ${dirPath}`
+        });
+      }
+      
+      // Handle macOS specific paths
+      else if (dirPath && dirPath.includes('~/Downloads')) {
+        const homePath = process.env.HOME || '/home/runner';
+        dirPath = path.join(homePath, 'Downloads');
+        console.log(`MacOS Downloads path: ${dirPath}`);
+      }
+      else if (dirPath && dirPath.includes('~/Documents')) {
+        const homePath = process.env.HOME || '/home/runner';
+        dirPath = path.join(homePath, 'Documents');
+        console.log(`MacOS Documents path: ${dirPath}`);
+      }
+      else if (dirPath && dirPath.includes('~/Pictures')) {
+        const homePath = process.env.HOME || '/home/runner';
+        dirPath = path.join(homePath, 'Pictures');
+        console.log(`MacOS Pictures path: ${dirPath}`);
+      }
+      
       // Default to workspace directory if path is empty
       if (!dirPath) {
         dirPath = '/home/runner/workspace';
@@ -211,6 +240,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Handle special path shortcuts
         if (dirPath && specialPaths.hasOwnProperty(dirPath)) {
           return specialPaths[dirPath as keyof typeof specialPaths];
+        }
+        
+        // Handle macOS specific paths
+        if (dirPath.includes('~/Downloads')) {
+          return path.join(process.env.HOME || '/home/runner', 'Downloads');
+        }
+        if (dirPath.includes('~/Documents')) {
+          return path.join(process.env.HOME || '/home/runner', 'Documents');
+        }
+        if (dirPath.includes('~/Pictures')) {
+          return path.join(process.env.HOME || '/home/runner', 'Pictures');
         }
         
         // Normalize the path
