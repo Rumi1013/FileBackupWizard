@@ -424,7 +424,7 @@ export default function GitHubRepositoryManager() {
                 {repoStats?.repositories[tab as keyof typeof repoStats.repositories]?.length ? (
                   <div className="space-y-2 p-2">
                     {repoStats.repositories[tab as keyof typeof repoStats.repositories]?.map((repo) => (
-                      <Card key={repo.id} className={`relative hover:shadow ${selectedRepos.includes(repo.full_name) ? 'ring-2 ring-primary' : ''}`}>
+                      <Card key={repo.id} className={`relative hover:shadow-md transition-all duration-200 ${selectedRepos.includes(repo.full_name) ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
                         <CardContent className="p-4">
                           <div className="absolute right-4 top-4">
                             <Switch
