@@ -19,6 +19,7 @@ import multer from 'multer';
 import recommendationRoutes from './recommendation-routes';
 import previewRoutes from './preview-routes';
 import githubRoutes from './github-routes';
+import fileTagRoutes from './file-tag-routes';
 
 // List of supported file types
 const VALID_FILE_TYPES = [
@@ -811,6 +812,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register GitHub repository management routes
   app.use('/api/github', githubRoutes);
+  
+  // Register file tag routes (emoji-based tagging system)
+  app.use('/api/tags', fileTagRoutes);
 
   const httpServer = createServer(app);
   return httpServer;
