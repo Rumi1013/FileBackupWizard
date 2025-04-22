@@ -321,12 +321,15 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
   
   // Common emojis for file organization, grouped by category
   const commonEmojis = {
-    'Priority': ['⭐', '🔥', '⚡', '🚨', '📌', '🏆'],
-    'Status': ['✅', '❌', '⏳', '🕒', '📝', '🔄'],
-    'Type': ['📄', '📊', '📁', '🖼️', '🎥', '🎵'],
-    'Project': ['🏢', '🏠', '🌟', '💼', '🚀', '🎯'],
-    'Personal': ['❤️', '😊', '👍', '👎', '👀', '✨'],
-    'Weather': ['☀️', '🌧️', '❄️', '🌈', '☁️', '⛈️']
+    'Priority': ['⭐', '🔥', '⚡', '🚨', '📌', '🏆', '💎', '🥇'],
+    'Status': ['✅', '❌', '⏳', '🕒', '📝', '🔄', '🚦', '🔍'],
+    'Type': ['📄', '📊', '📁', '🖼️', '🎥', '🎵', '📱', '💻', '🎨', '📚'],
+    'Project': ['🏢', '🏠', '🌟', '💼', '🚀', '🎯', '🗂️', '📈'],
+    'Personal': ['❤️', '😊', '👍', '👎', '👀', '✨', '💯', '🎭'],
+    'Midnight': ['🌙', '🌃', '🌑', '🌌', '✨', '🏛️', '🌿', '🌼'],
+    'Business': ['💰', '📊', '📱', '💻', '📈', '📥', '🤝', '💡'],
+    'Creative': ['🎨', '📸', '🎬', '🎵', '✏️', '🎭', '👗', '💄'],
+    'Productivity': ['⏰', '📅', '📋', '✅', '🔍', '🗓️', '📎', '⚙️']
   };
   
   // Filter tags based on search query
@@ -495,11 +498,18 @@ function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps
                           <PopoverContent className="w-64 p-0" align="end">
                             <div className="p-3">
                               <div className="font-medium text-sm mb-2">Common Emojis</div>
-                              <Tabs defaultValue="Priority">
-                                <TabsList className="grid grid-cols-3 mb-2">
+                              <Tabs defaultValue="Midnight">
+                                <TabsList className="grid grid-cols-4 mb-2">
+                                  <TabsTrigger value="Midnight">Midnight</TabsTrigger>
+                                  <TabsTrigger value="Business">Business</TabsTrigger>
+                                  <TabsTrigger value="Creative">Creative</TabsTrigger>
+                                  <TabsTrigger value="Productivity">Productivity</TabsTrigger>
+                                </TabsList>
+                                <TabsList className="grid grid-cols-4 mb-2 mt-1">
                                   <TabsTrigger value="Priority">Priority</TabsTrigger>
                                   <TabsTrigger value="Status">Status</TabsTrigger>
                                   <TabsTrigger value="Type">Type</TabsTrigger>
+                                  <TabsTrigger value="Project">Project</TabsTrigger>
                                 </TabsList>
                                 {Object.entries(commonEmojis).map(([category, emojiList]) => (
                                   <TabsContent key={category} value={category} className="mt-0">
