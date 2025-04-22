@@ -60,6 +60,46 @@
     @apply px-4 mx-auto max-w-7xl;
   }
 
+  .mm-page-title {
+    @apply text-4xl font-serif tracking-tight text-primary mb-6;
+  }
+
+  .mm-section {
+    @apply bg-white/50 backdrop-blur-sm rounded-lg border border-border/50 p-6 shadow-lg;
+  }
+
+  .mm-input-group {
+    @apply space-y-2;
+  }
+
+  .mm-button-primary {
+    @apply bg-[#0A192F] hover:bg-[#0A192F]/90 text-white rounded-md px-4 py-2 transition-colors;
+  }
+
+  .mm-button-secondary {
+    @apply bg-[#D4AF37] hover:bg-[#D4AF37]/90 text-white rounded-md px-4 py-2 transition-colors;
+  }
+
+  .mm-button-outline {
+    @apply border-2 border-[#0A192F] text-[#0A192F] hover:bg-[#0A192F]/10 rounded-md px-4 py-2 transition-colors;
+  }
+
+  .mm-tag {
+    @apply inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm bg-[#A3B18A]/20 text-[#0A192F] border border-[#A3B18A]/30;
+  }
+
+  .mm-card {
+    @apply bg-white/80 backdrop-blur-sm rounded-lg border border-border/50 p-6 shadow-md hover:shadow-lg transition-shadow;
+  }
+
+  .mm-header {
+    @apply bg-gradient-to-b from-background to-transparent pb-6 sticky top-0 z-10 backdrop-blur-sm;
+  }
+
+  .mm-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+
   .mm-heading {
     @apply text-3xl font-serif tracking-tight text-primary;
   }
