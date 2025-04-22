@@ -210,4 +210,18 @@ router.get('/file/:fileId', async (req: Request, res: Response, next: NextFuncti
   }
 });
 
+/**
+ * Get all file-tag mappings with file paths and tag details
+ * GET /api/tags/mappings
+ */
+router.get('/mappings', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const mappings = await storage.getAllFileTagMappings();
+    
+    res.json(mappings);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

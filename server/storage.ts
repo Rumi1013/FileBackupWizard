@@ -98,6 +98,7 @@ export interface IStorage {
   removeTagFromFile(fileId: string, tagId: string): Promise<boolean>;
   getFilesWithTag(tagId: string): Promise<MMFile[]>;
   getTagsForFile(fileId: string): Promise<FileTag[]>;
+  getAllFileTagMappings(): Promise<{fileId: string; tagId: string; filePath?: string; fileName?: string; tag?: FileTag}[]>;
 }
 
 const VALID_FILE_TYPES = [
