@@ -54,7 +54,7 @@ interface FileTagsProps {
   onTagsChanged?: () => void;
 }
 
-export function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps) {
+function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTagsProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -68,11 +68,11 @@ export function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTa
   });
 
   // Fetch all available tags
-  const { data: allTags, isLoading: isLoadingAllTags } = useQuery({
+  const { data: allTags, isLoading: isLoadingAllTags } = useQuery<FileTag[]>({
     queryKey: ['/api/tags'],
     queryFn: async () => {
       const response = await apiRequest('GET', '/api/tags');
-      return response.data || [];
+      return response || [];
     }
   });
 
@@ -80,12 +80,12 @@ export function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTa
   const { 
     data: fileTags, 
     isLoading: isLoadingFileTags 
-  } = useQuery({
+  } = useQuery<FileTag[]>({
     queryKey: ['/api/tags/file', fileId],
     queryFn: async () => {
       if (!fileId) return [];
       const response = await apiRequest('GET', `/api/tags/file/${fileId}`);
-      return response.data || [];
+      return response || [];
     },
     enabled: !!fileId
   });
@@ -259,7 +259,7 @@ export function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTa
   const handleToggleTagOnFile = (tag: FileTag) => {
     if (!fileId) return;
 
-    const isTaggedAlready = fileTags?.some(t => t.id === tag.id);
+    const isTaggedAlready = fileTags?.some((t: FileTag) => t.id === tag.id);
     
     if (isTaggedAlready) {
       removeTagFromFileMutation.mutate({ fileId, tagId: tag.id });
@@ -402,12 +402,12 @@ export function FileTags({ fileId, showAddButton = true, onTagsChanged }: FileTa
                   <div className="flex items-center gap-2">
                     {fileId && (
                       <Button
-                        variant={fileTags?.some(t => t.id === tag.id) ? "destructive" : "secondary"}
+                        variant={fileTags?.some((t: FileTag) => t.id === tag.id) ? "destructive" : "secondary"}
                         size="sm"
                         onClick={() => handleToggleTagOnFile(tag)}
                         className="text-xs h-8 px-2"
                       >
-                        {fileTags?.some(t => t.id === tag.id) ? "Remove" : "Add"}
+                        {fileTags?.some((t: FileTag) => t.id === tag.id) ? "Remove" : "Add"}
                       </Button>
                     )}
                   </div>
@@ -552,4 +552,4 @@ function isDarkColor(hexColor: string): boolean {
   return brightness < 128;
 }
 
-export default FileTags;
+export { FileTags };

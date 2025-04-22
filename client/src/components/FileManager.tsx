@@ -5,7 +5,7 @@ import { LogViewer } from "./LogViewer";
 import { FileAssessment } from "./FileAssessment";
 import { ExternalServices } from "./ExternalServices";
 import StorageSelector from "./StorageSelector";
-import FileTags from "./FileTags";
+import { FileTags } from "./FileTags";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -38,7 +38,8 @@ import {
   Link,
   CloudIcon,
   DownloadCloud,
-  ExternalLink 
+  ExternalLink,
+  Tag
 } from "lucide-react";
 import type { DirectoryEntry, DailyReport, FileAssessment as FileAssessmentType } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
