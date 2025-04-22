@@ -1,15 +1,7 @@
 
 {
+  "primary": "#0A3B4D",
   "variant": "professional",
   "appearance": "dark",
-  "radius": 0.5,
-  "colors": {
-    "primary": "#191970",
-    "secondary": "#F8F6F0",
-    "accent": "#C0C0B0",
-    "background": "#0A0A1F",
-    "foreground": "#F8F6F0",
-    "muted": "#333355",
-    "border": "#2A2A40"
-  }
+  "radius": 0.5
 }
