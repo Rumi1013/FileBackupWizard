@@ -5,14 +5,14 @@
 @layer base {
   :root {
     --background: 240 65% 8%;
-    --foreground: 40 30% 96%;
+    --foreground: 40 30% 97%;
     --card: 240 65% 10%;
-    --card-foreground: 40 30% 96%;
+    --card-foreground: 40 30% 97%;
     --popover: 240 65% 10%;
-    --popover-foreground: 40 30% 96%;
+    --popover-foreground: 40 30% 97%;
     --primary: 240 64% 27%;
-    --primary-foreground: 40 30% 96%;
-    --secondary: 40 30% 96%;
+    --primary-foreground: 40 30% 97%;
+    --secondary: 60 10% 75%;
     --secondary-foreground: 240 64% 27%;
     --muted: 240 35% 25%;
     --muted-foreground: 40 30% 75%;
@@ -23,25 +23,6 @@
     --border: 240 35% 25%;
     --input: 240 35% 25%;
     --ring: 240 64% 27%;
-    --background: 270 50% 98%;
-    --foreground: 270 10% 15%;
-    --card: 270 50% 99%;
-    --card-foreground: 270 10% 15%;
-    --popover: 270 50% 99%;
-    --popover-foreground: 270 10% 15%;
-    --primary: 270 54% 50%;
-    --primary-foreground: 270 10% 98%;
-    --secondary: 270 20% 92%;
-    --secondary-foreground: 270 10% 15%;
-    --muted: 270 20% 92%;
-    --muted-foreground: 270 10% 45%;
-    --accent: 270 30% 90%;
-    --accent-foreground: 270 10% 15%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 270 20% 88%;
-    --input: 270 20% 88%;
-    --ring: 270 54% 50%;
     --radius: 0.5rem;
   }
 
@@ -78,7 +59,7 @@
   .container {
     @apply px-4 mx-auto max-w-7xl;
   }
-  
+
   .card {
     @apply rounded-lg border bg-card p-4 shadow-sm;
   }
