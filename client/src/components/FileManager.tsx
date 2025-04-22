@@ -6,6 +6,8 @@ import { FileAssessment } from "./FileAssessment";
 import { ExternalServices } from "./ExternalServices";
 import StorageSelector from "./StorageSelector";
 import { FileTags } from "./FileTags";
+import TagPresetManager from "./TagPresetManager";
+import BatchTagOrganizer from "./BatchTagOrganizer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -39,7 +41,8 @@ import {
   CloudIcon,
   DownloadCloud,
   ExternalLink,
-  Tag
+  Tag,
+  Boxes
 } from "lucide-react";
 import type { DirectoryEntry, DailyReport, FileAssessment as FileAssessmentType } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -1035,25 +1038,68 @@ export function FileManager() {
           <FileAssessment filePath={selectedFile} />
           
           {selectedFile && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center">
-                  <Tag className="h-4 w-4 mr-2" />
-                  File Tags
-                </CardTitle>
-                <CardDescription>
-                  Organize files with emoji-based tags
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FileTags 
-                  fileId={selectedFile} 
-                  showAddButton={true}
-                  onTagsChanged={() => refetch()}
-                />
-              </CardContent>
-            </Card>
+            <>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center">
+                    <Tag className="h-4 w-4 mr-2" />
+                    File Tags
+                  </CardTitle>
+                  <CardDescription>
+                    Organize files with emoji-based tags
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FileTags 
+                    fileId={selectedFile} 
+                    showAddButton={true}
+                    onTagsChanged={() => refetch()}
+                  />
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Organization Templates
+                  </CardTitle>
+                  <CardDescription>
+                    Apply consistent tag collections using templates
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <TagPresetManager 
+                    fileId={selectedFile}
+                    filePath={selectedFile}
+                    onTagsChanged={() => refetch()}
+                  />
+                </CardContent>
+              </Card>
+            </>
           )}
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center">
+                <Boxes className="h-4 w-4 mr-2" />
+                Batch Organization
+              </CardTitle>
+              <CardDescription>
+                Apply templates to multiple files at once
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <BatchTagOrganizer 
+                  filePaths={directoryData?.children
+                    ?.filter(item => item.type === 'file')
+                    ?.map(item => item.path) || []}
+                  onComplete={() => refetch()}
+                />
+              </div>
+            </CardContent>
+          </Card>
           
           <ExternalServices 
             onNavigate={(path) => setCurrentPath(path)}

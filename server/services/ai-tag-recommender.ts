@@ -115,6 +115,44 @@ Focus on these categories for tagging:
 - Monetization potential (💰 high value, 📈 growth potential, etc.)
 - Action needed (🔍 review, 📝 edit, etc.)
 
+ORGANIZATION CATEGORIES:
+When tagging content, also consider these specialized organizational categories from Midnight Magnolia's content management system:
+
+CONTENT STATUS:
+- 📝 Draft - Content in draft form needing refinement
+- 🔍 In Review - Content being reviewed by team members
+- ✅ Approved - Content approved and ready for use
+- 🌟 Published - Content that has been published and is live
+- 🔄 Needs Update - Content that needs to be updated or refreshed
+
+MONETIZATION POTENTIAL:
+- 💰 High Value - Content with direct high revenue potential
+- 📈 Growth Asset - Content that drives growth or audience building
+- 🧲 Lead Magnet - Content designed to attract new audience members
+- 🏛️ Brand Building - Content that strengthens brand identity
+- 🎁 Freemium - Free content that supports premium offerings
+
+ADHD-FRIENDLY ORGANIZATION:
+- ⚡ Need Today - Files that need immediate attention today
+- 🏆 Quick Win - Tasks that can be completed quickly for momentum
+- 🧠 Focus Time - Requires dedicated focus time to work on
+- ⏰ Revisit Later - Set aside to revisit at a specified later time
+- 🌊 Overwhelm Risk - Content that may cause overwhelm - approach with care
+
+EVENT PLANNING:
+- 🗓️ Schedule - Event schedules and timelines
+- 🤝 Vendor - Vendor contracts and information
+- 🏢 Venue - Venue details and floor plans
+- 📣 Marketing - Event marketing and promotion materials
+- 💵 Budget - Event budget and financial tracking
+
+BRAND ASSET MANAGEMENT:
+- 🎨 Logo - Logo files in various formats
+- 🔤 Typography - Typography assets and font files
+- 🎭 Color Palette - Brand color palette specifications
+- 📋 Template - Brand templates for various uses
+- 📘 Brand Guide - Official brand guidelines and manuals
+
 ${existingTagsInfo}`
         },
         {
