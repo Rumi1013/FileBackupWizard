@@ -5,8 +5,8 @@ interface Repository {
   name: string;
   full_name: string;
   description: string | null;
-  created_at: string;
-  updated_at: string;
+  created_at: string; // Now enforced to be non-null in the implementation
+  updated_at: string; // Now enforced to be non-null in the implementation
   pushed_at: string | null;
   size: number;
   stargazers_count: number;
@@ -59,8 +59,8 @@ export async function listUserRepositories(token: string): Promise<Repository[]>
         name: repo.name,
         full_name: repo.full_name,
         description: repo.description || null,
-        created_at: repo.created_at,
-        updated_at: repo.updated_at,
+        created_at: repo.created_at || '',
+        updated_at: repo.updated_at || '',
         pushed_at: repo.pushed_at,
         size: repo.size,
         stargazers_count: repo.stargazers_count,

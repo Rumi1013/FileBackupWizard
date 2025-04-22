@@ -61,18 +61,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       let dirPath = req.query.path as string;
       
-      // Default to workspace directory if path is empty
-      if (!dirPath || dirPath === '/') {
-        dirPath = '/home/runner/workspace';
-        console.log(`Redirecting root scan to safer workspace directory`);
+      // Create a list of special paths that we should handle
+      const specialPaths: Record<string, string> = {
+        '/': '/home/runner/workspace',
+        '~': process.env.HOME || '/home/runner',
+        'home': '/home/runner',
+        'workspace': '/home/runner/workspace',
+        'midnight-magnolia': '/home/runner/workspace/midnight-magnolia'
+      };
+      
+      // Handle special path shortcuts
+      if (dirPath && specialPaths.hasOwnProperty(dirPath)) {
+        dirPath = specialPaths[dirPath];
+        console.log(`Translating special path to: ${dirPath}`);
         
         await storage.addLog({
           level: 'info',
-          message: `Redirected scan from root to workspace directory`
+          message: `Translated special path to: ${dirPath}`
         });
       }
       
-      // Sanitize the path - restrict to user directories only
+      // Default to workspace directory if path is empty
+      if (!dirPath) {
+        dirPath = '/home/runner/workspace';
+        console.log(`Defaulting to workspace directory`);
+        
+        await storage.addLog({
+          level: 'info',
+          message: `Defaulted to workspace directory`
+        });
+      }
+      
+      // Normalize path to ensure consistent format
+      dirPath = path.normalize(dirPath);
+      
+      // Expand ~ to user's home directory if present
+      if (dirPath.startsWith('~')) {
+        dirPath = dirPath.replace('~', process.env.HOME || '/home/runner');
+      }
+      
+      // Sanitize the path - restrict to user directories only, but with better messaging
       const restrictedDirs = ['/proc', '/sys', '/dev', '/tmp', '/etc', '/var/run', '/var/cache'];
       if (restrictedDirs.some(dir => dirPath.includes(dir))) {
         console.log(`Rejecting scan of restricted directory: ${dirPath}`);
@@ -82,13 +110,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `Rejected scan of restricted directory: ${dirPath}`
         });
         
+        // Provide suggested alternatives for restricted paths
+        let suggestedPath = '/home/runner/workspace';
+        if (dirPath.includes('/tmp')) {
+          suggestedPath = '/home/runner/workspace/temp';
+        }
+        
         return res.json({ 
-          error: 'Access to system directories is restricted',
+          error: 'Access to system directories is restricted for security reasons',
           name: path.basename(dirPath),
           path: dirPath,
           type: 'directory',
           children: [],
-          restricted: true
+          restricted: true,
+          suggestion: `Try using ${suggestedPath} instead`,
+          suggestedPath: suggestedPath
         });
       }
       
@@ -154,20 +190,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: `Batch scan requested for ${dirPaths.length} directories`
       });
       
+      // Special paths mapping for batch operations
+      const specialPaths: Record<string, string> = {
+        '/': '/home/runner/workspace',
+        '~': process.env.HOME || '/home/runner',
+        'home': '/home/runner',
+        'workspace': '/home/runner/workspace',
+        'midnight-magnolia': '/home/runner/workspace/midnight-magnolia'
+      };
+      
       // Validate and filter out restricted directories
       const restrictedDirs = ['/proc', '/sys', '/dev', '/tmp', '/etc', '/var/run', '/var/cache'];
-      const validatedPaths = dirPaths.map(dirPath => {
-        // Replace empty paths with workspace directory
-        if (!dirPath || dirPath === '/') {
+      const validatedPaths = dirPaths.map((dirPath: string) => {
+        // Handle null or undefined paths
+        if (!dirPath) {
           return '/home/runner/workspace';
         }
         
-        // Mark restricted directories
-        if (restrictedDirs.some(dir => dirPath.includes(dir))) {
-          return { path: dirPath, restricted: true };
+        // Handle special path shortcuts
+        if (dirPath && specialPaths.hasOwnProperty(dirPath)) {
+          return specialPaths[dirPath as keyof typeof specialPaths];
         }
         
-        return dirPath;
+        // Normalize the path
+        let normalizedPath = path.normalize(dirPath);
+        
+        // Expand ~ to user's home directory if present
+        if (normalizedPath.startsWith('~')) {
+          normalizedPath = normalizedPath.replace('~', process.env.HOME || '/home/runner');
+        }
+        
+        // Mark restricted directories
+        if (restrictedDirs.some(dir => normalizedPath.includes(dir))) {
+          return { path: normalizedPath, restricted: true };
+        }
+        
+        return normalizedPath;
       });
       
       // Filter out restricted directories and extract clean paths
