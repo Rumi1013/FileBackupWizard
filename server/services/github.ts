@@ -23,13 +23,18 @@ interface Repository {
   usage_status?: 'active' | 'inactive' | 'dormant';
 }
 
+// Token stored in memory during application runtime
+let githubToken: string | null = process.env.GITHUB_TOKEN || null;
+
 export async function getGitHubToken(): Promise<string> {
-  // In a real application, this would be retrieved from a secure store or environment variable
-  const token = process.env.GITHUB_TOKEN;
-  if (!token) {
+  if (!githubToken) {
     throw new Error('GitHub token not found in environment variables');
   }
-  return token;
+  return githubToken;
+}
+
+export async function setGitHubToken(token: string): Promise<void> {
+  githubToken = token;
 }
 
 export async function listUserRepositories(token: string): Promise<Repository[]> {
