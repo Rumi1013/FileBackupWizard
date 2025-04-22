@@ -18,6 +18,7 @@ import { DatabaseStorage } from "./storage";
 import multer from 'multer';
 import recommendationRoutes from './recommendation-routes';
 import previewRoutes from './preview-routes';
+import githubRoutes from './github-routes';
 
 // List of supported file types
 const VALID_FILE_TYPES = [
