@@ -811,11 +811,24 @@ export function FileManager() {
                   </div>
                   
                   {/* File Preview Component */}
-                  <div className="border rounded-md h-[350px] overflow-hidden">
+                  <div className="border rounded-md h-[250px] overflow-auto">
                     {/* Add File Preview component here with the selectedFile */}
                     <div className="p-4 flex items-center justify-center h-full text-muted-foreground text-sm">
                       File preview will be displayed here
                     </div>
+                  </div>
+                  
+                  {/* File Tags Component */}
+                  <div className="mt-3 border rounded-md p-3">
+                    <div className="text-sm font-medium mb-2 flex items-center">
+                      <Tag className="h-3.5 w-3.5 mr-1.5 text-primary" />
+                      File Tags
+                    </div>
+                    <FileTags 
+                      fileId={selectedFile} 
+                      showAddButton={true}
+                      onTagsChanged={() => refetch()}
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -832,20 +845,67 @@ export function FileManager() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <Button size="sm" className="w-full" variant="outline">
-                  <Tag className="h-3.5 w-3.5 mr-1" />
-                  Manage Tags
-                </Button>
-                
-                <Button size="sm" className="w-full" variant="outline">
-                  <Sparkles className="h-3.5 w-3.5 mr-1" />
-                  Get AI Tag Suggestions
-                </Button>
-                
-                <Button size="sm" className="w-full" variant="outline">
-                  <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                  Batch Process Tags
-                </Button>
+                <Tabs defaultValue="manage">
+                  <TabsList className="grid grid-cols-3 mb-2">
+                    <TabsTrigger value="manage">
+                      <Tag className="h-3.5 w-3.5 mr-1" />
+                      Manage
+                    </TabsTrigger>
+                    <TabsTrigger value="suggestions">
+                      <Sparkles className="h-3.5 w-3.5 mr-1" />
+                      AI Suggest
+                    </TabsTrigger>
+                    <TabsTrigger value="batch">
+                      <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                      Batch
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="manage" className="space-y-4 mt-2">
+                    <div className="text-xs text-muted-foreground">
+                      Manage your tag library with emoji-based organization
+                    </div>
+                    <FileTags 
+                      showAddButton={true}
+                    />
+                  </TabsContent>
+                  
+                  <TabsContent value="suggestions" className="space-y-4 mt-2">
+                    <div className="text-xs text-muted-foreground">
+                      Get AI-powered tag suggestions based on file content
+                    </div>
+                    <Button size="sm" className="w-full" variant="outline" disabled={!selectedFile}>
+                      <Sparkles className="h-3.5 w-3.5 mr-1" />
+                      Get AI Tag Suggestions
+                    </Button>
+                  </TabsContent>
+                  
+                  <TabsContent value="batch" className="space-y-4 mt-2">
+                    <div className="text-xs text-muted-foreground">
+                      Process tags in batches for multiple files
+                    </div>
+                    <div className="space-y-2">
+                      <Button 
+                        size="sm" 
+                        className="w-full" 
+                        variant="outline"
+                        onClick={() => toggleBatchMode()}
+                      >
+                        <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                        {isBatchMode ? "Exit Batch Mode" : "Enter Batch Mode"}
+                      </Button>
+                      
+                      <BatchTagOrganizer 
+                        filePaths={Array.from(selectedDirectories)}
+                        onComplete={() => {
+                          refetch();
+                          setSelectedDirectories(new Set());
+                          setIsBatchMode(false);
+                        }}
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
             </CardContent>
           </Card>
