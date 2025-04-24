@@ -58,6 +58,15 @@ export function FileManager() {
   const [selectedDirectories, setSelectedDirectories] = useState<Set<string>>(new Set());
   const [storageProvider, setStorageProvider] = useState<'local' | 'dropbox' | 'google-drive' | 'github' | 'cloudflare' | 'mm-storage' | 'custom'>('local');
   const { toast } = useToast();
+  
+  // Common error handler for mutations
+  const handleMutationError = (error: any) => {
+    toast({
+      title: "Error",
+      description: String(error),
+      variant: "destructive",
+    });
+  };
 
   // Query for directory data
   const { data: directoryData, isLoading, error, refetch } = useQuery<DirectoryEntry>({
@@ -430,40 +439,36 @@ export function FileManager() {
       case 'deletion':
         filterFunction = filterDeletionCandidates;
         break;
-      default:
-        return;
     }
 
-    // Get filtered files
-    const filteredFiles = filterFunction(directoryData);
-
-    // Flatten the structure to get all file paths
-    const getAllFilePaths = (entries: DirectoryEntry[]): string[] => {
-      const paths: string[] = [];
-
+    // Extract file paths
+    const filePaths: string[] = [];
+    const extractFilePaths = (entries: DirectoryEntry[]) => {
       for (const entry of entries) {
         if (entry.type === 'file') {
-          paths.push(entry.path);
-        } else if (entry.children) {
-          paths.push(...getAllFilePaths(entry.children));
+          filePaths.push(entry.path);
+        }
+        if (entry.children && entry.children.length > 0) {
+          extractFilePaths(entry.children);
         }
       }
-
-      return paths;
     };
 
-    const filePaths = getAllFilePaths(filteredFiles);
+    // Apply the filter and extract file paths
+    const filteredData = filterFunction(directoryData);
+    extractFilePaths(filteredData);
 
     if (filePaths.length === 0) {
       toast({
         title: "No Files Found",
-        description: `No ${category.replace('-', ' ')} files found for batch organization`,
+        description: `No files match the ${category} criteria for batch organization.`,
+        variant: "default"
       });
       return;
     }
 
-    // Confirm with user
-    if (confirm(`Apply organization rules to ${filePaths.length} ${category.replace('-', ' ')} files?`)) {
+    // Confirm and process
+    if (confirm(`Process ${filePaths.length} ${category} files?`)) {
       batchOrganizeMutation.mutate(filePaths);
     }
   };
@@ -471,300 +476,176 @@ export function FileManager() {
   // Get file statistics
   const stats = getFileStats();
 
-  const handleMutationError = (error: any) => {
-    toast({
-      title: "Error",
-      description: String(error),
-      variant: "destructive",
-    });
-  };
-
   return (
-    <div className="space-y-6">
-      {/* Navigation Panel */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col gap-4">
-            {/* Breadcrumb Navigation */}
-            <div className="flex items-center gap-2">
-              <Breadcrumb>
-                <BreadcrumbItem>
-                  <BreadcrumbLink onClick={() => handlePathChange("/")}>
-                    Root
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
+    <div className="space-y-4">
+      {/* Top Navigation Bar */}
+      <Card className="border-b shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4 justify-between">
+            {/* Left side: Location controls */}
+            <div className="flex flex-col gap-2 flex-grow">
+              <div className="flex items-center gap-2">
+                <StorageSelector
+                  onStorageSelect={handleStorageSelect}
+                  currentPath={currentPath}
+                />
+                
+                <Button 
+                  onClick={() => scanMutation.mutate()}
+                  disabled={scanMutation.isPending}
+                  size="icon"
+                  variant="outline"
+                  title="Refresh current directory"
+                >
+                  <RefreshCw className={`h-4 w-4 ${scanMutation.isPending ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+              
+              {/* Simple breadcrumb path */}
+              <div className="flex items-center overflow-x-auto gap-1 text-sm px-2 py-1 bg-muted/20 rounded-md">
+                <Button 
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={goToRoot}
+                  title="Go to Root"
+                >
+                  <Home className="h-3.5 w-3.5" />
+                </Button>
+                <span className="text-muted-foreground">/</span>
                 {breadcrumbs.map((segment, index) => {
                   const path = '/' + breadcrumbs.slice(0, index + 1).join('/');
                   return (
-                    <BreadcrumbItem key={path}>
-                      <ChevronRight className="h-4 w-4" />
-                      <BreadcrumbLink onClick={() => handlePathChange(path)}>
+                    <div key={path} className="flex items-center">
+                      <Button 
+                        variant="ghost" 
+                        className="h-6 px-2 text-xs font-medium"
+                        onClick={() => handlePathChange(path)}
+                      >
                         {segment}
-                      </BreadcrumbLink>
-                    </BreadcrumbItem>
+                      </Button>
+                      {index < breadcrumbs.length - 1 && (
+                        <span className="text-muted-foreground">/</span>
+                      )}
+                    </div>
                   );
                 })}
-              </Breadcrumb>
+              </div>
             </div>
-
-            {/* Storage Selector */}
-            <StorageSelector
-              onStorageSelect={handleStorageSelect}
-              currentPath={currentPath}
-            />
-
-            {/* Path Input and Actions */}
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline"
-                  onClick={goToRoot}
-                  className="min-w-[40px] px-3"
-                  title="Go to Root Directory"
-                >
-                  <Home className="h-4 w-4" />
-                </Button>
-                <Input
-                  value={currentPath}
-                  onChange={(e) => setCurrentPath(e.target.value)}
-                  placeholder="Enter directory path"
-                  className="flex-1"
-                />
-                <Button 
-                  onClick={() => scanMutation.mutate()}
-                  disabled={scanMutation.isPending || batchScanMutation.isPending}
-                >
-                  <RefreshCw className={`mr-2 h-4 w-4 ${scanMutation.isPending ? 'animate-spin' : ''}`} />
-                  Scan
-                </Button>
-              </div>
-
-              {/* Batch Mode Controls */}
-              <div className="flex items-center justify-between gap-2 px-1">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant={isBatchMode ? "default" : "outline"}
-                    size="sm"
-                    onClick={toggleBatchMode}
-                    className="text-xs h-8"
-                    disabled={batchScanMutation.isPending}
-                  >
-                    {isBatchMode ? (
-                      <>
-                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                        Exit Batch Mode
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                        Enable Batch Mode
-                      </>
-                    )}
-                  </Button>
-
-                  {isBatchMode && (
-                    <span className="text-xs text-muted-foreground">
-                      {selectedDirectories.size} {selectedDirectories.size === 1 ? 'directory' : 'directories'} selected
-                    </span>
-                  )}
-                </div>
-
-                {isBatchMode && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleBatchScan}
-                    disabled={selectedDirectories.size === 0 || batchScanMutation.isPending}
-                    className="text-xs h-8"
-                  >
-                    {batchScanMutation.isPending ? (
-                      <>
-                        <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                        Scan Selected Directories
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
+            
+            {/* Right side: Quick actions */}
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => document.getElementById('file-upload-input')?.click()}
+                size="sm"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Upload
+              </Button>
+              
+              <Button 
+                variant="outline"
+                onClick={handleCreateFolder}
+                size="sm"
+              >
+                <FolderPlus className="h-4 w-4 mr-2" />
+                New Folder
+              </Button>
             </div>
           </div>
+          
+          {/* Progress indicator */}
+          {(isLoading || scanMutation.isPending) && (
+            <Progress value={30} className="w-full mt-2" />
+          )}
+          
+          {/* Error message if present */}
+          {error && (
+            <div className="bg-destructive/10 text-destructive rounded-md p-2 mt-2 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              <p className="text-xs">{String(error)}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      {/* Main Content Area */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Panel: File Browser & Actions */}
-        <div className="space-y-4 lg:col-span-2">
-          {/* File Statistics Dashboard */}
-          <Card className="bg-muted/40">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <BarChart4 className="h-5 w-5" />
-                File Statistics & Insights
-              </CardTitle>
-              <CardDescription>Overview of your files and organization status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-background rounded-lg p-4 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-sm font-medium">Total Files</h3>
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <p className="text-2xl font-bold mt-2">{stats.total}</p>
+      
+      {/* Main content with tabs */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Left panel: File browser (8 cols) */}
+        <div className="lg:col-span-8 space-y-4">
+          {/* File Browser Tabs */}
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="grid grid-cols-4 mb-2">
+              <TabsTrigger value="all" onClick={() => setOrganizationView('all')}>
+                <Folder className="mr-2 h-4 w-4" />
+                All Files
+              </TabsTrigger>
+              <TabsTrigger value="high-quality" onClick={() => setOrganizationView('high-quality')}>
+                <Award className="mr-2 h-4 w-4" />
+                High Quality
+              </TabsTrigger>
+              <TabsTrigger value="monetizable" onClick={() => setOrganizationView('monetizable')}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Monetizable
+              </TabsTrigger>
+              <TabsTrigger value="tag-search">
+                <Tag className="mr-2 h-4 w-4" />
+                Tag Search
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* Batch Action Bar - appears when in batch mode */}
+            {isBatchMode && (
+              <div className="bg-muted/30 rounded-md p-2 mb-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs">
+                    {selectedDirectories.size} {selectedDirectories.size === 1 ? 'item' : 'items'} selected
+                  </span>
                 </div>
-
-                <div className="bg-background rounded-lg p-4 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-sm font-medium">High Quality</h3>
-                    <Award className="h-4 w-4 text-green-500" />
-                  </div>
-                  <p className="text-2xl font-bold mt-2">{stats.highQuality}</p>
-                </div>
-
-                <div className="bg-background rounded-lg p-4 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-sm font-medium">Monetizable</h3>
-                    <Sparkles className="h-4 w-4 text-amber-500" />
-                  </div>
-                  <p className="text-2xl font-bold mt-2">{stats.monetizable}</p>
-                </div>
-
-                <div className="bg-background rounded-lg p-4 shadow-sm">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-sm font-medium">For Deletion</h3>
-                    <AlertTriangle className="h-4 w-4 text-destructive" />
-                  </div>
-                  <p className="text-2xl font-bold mt-2">{stats.forDeletion}</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={handleBatchScan}
+                    disabled={selectedDirectories.size === 0}
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" />
+                    Process Selected
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={toggleBatchMode}
+                  >
+                    Cancel
+                  </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <BrainCircuit className="h-5 w-5" />
-                ADHD-Friendly Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                <Button 
-                  variant="outline" 
-                  className="flex flex-col items-center p-4 h-auto hover:bg-primary/5 hover:border-primary transition-colors"
-                  onClick={() => document.getElementById('file-upload-input')?.click()}
-                >
-                  <Upload className="h-8 w-8 mb-2 text-primary" />
-                  <span className="text-xs font-medium">Upload File</span>
-                </Button>
-
-                <Button 
-                  variant="outline" 
-                  className="flex flex-col items-center p-4 h-auto hover:bg-primary/5 hover:border-primary transition-colors"
-                  onClick={handleCreateFolder}
-                >
-                  <FolderPlus className="h-8 w-8 mb-2 text-primary" />
-                  <span className="text-xs font-medium">New Folder</span>
-                </Button>
-
-                <Button 
-                  variant="outline" 
-                  className="flex flex-col items-center p-4 h-auto hover:bg-primary/5 hover:border-primary transition-colors"
-                  disabled={!selectedFile}
-                  onClick={handleAnalyzeFile}
-                >
-                  <FileText className="h-8 w-8 mb-2 text-primary" />
-                  <span className="text-xs font-medium">Analyze File</span>
-                </Button>
-
-                <Button 
-                  variant="outline" 
-                  className="flex flex-col items-center p-4 h-auto hover:bg-primary/5 hover:border-primary transition-colors"
-                  disabled={!selectedFile}
-                  onClick={handleOrganizeFile}
-                >
-                  <MoveRight className="h-8 w-8 mb-2 text-primary" />
-                  <span className="text-xs font-medium">Organize</span>
-                </Button>
-
-                <Button 
-                  variant="outline" 
-                  className="flex flex-col items-center p-4 h-auto hover:bg-primary/5 hover:border-primary transition-colors"
-                >
-                  <ClipboardList className="h-8 w-8 mb-2 text-primary" />
-                  <span className="text-xs font-medium">Daily Report</span>
-                </Button>
-
-                <Button 
-                  variant="outline" 
-                  className="flex flex-col items-center p-4 h-auto text-destructive hover:bg-destructive/5 hover:border-destructive transition-colors" 
-                  disabled={!selectedFile}
-                >
-                  <Trash className="h-8 w-8 mb-2" />
-                  <span className="text-xs font-medium">Delete</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <FileUploader 
-            currentDirectory={currentPath}
-            onUploadComplete={handleUploadComplete}
-          />
-
-          {(isLoading || scanMutation.isPending) && (
-            <Progress value={30} className="w-full" />
-          )}
-
-          {error && (
-            <div className="bg-destructive/10 text-destructive rounded-md p-4 flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" />
-              <p className="text-sm">{String(error)}</p>
-            </div>
-          )}
-
-          {/* File View Tabs */}
-          <Tabs defaultValue="all">
-            <div className="flex justify-between items-center mb-2">
-              <TabsList className="grid grid-cols-6 w-full">
-                <TabsTrigger value="all" onClick={() => setOrganizationView('all')}>
-                  <Folder className="mr-2 h-4 w-4" />
-                  All Files
-                </TabsTrigger>
-                <TabsTrigger value="high-quality" onClick={() => setOrganizationView('high-quality')}>
-                  <Award className="mr-2 h-4 w-4" />
-                  High Quality
-                </TabsTrigger>
-                <TabsTrigger value="monetizable" onClick={() => setOrganizationView('monetizable')}>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Monetizable
-                </TabsTrigger>
-                <TabsTrigger value="deletion" onClick={() => setOrganizationView('delete-candidates')}>
-                  <AlertTriangle className="mr-2 h-4 w-4" />
-                  Deletion
-                </TabsTrigger>
-                <TabsTrigger value="tag-search">
-                  <Tag className="mr-2 h-4 w-4" />
-                  Tag Search
-                </TabsTrigger>
-                <TabsTrigger value="rot-analysis">
-                  <FileWarning className="mr-2 h-4 w-4" />
-                  ROT Analysis
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
+            )}
+            
+            {/* File browser content for different tabs */}
             <TabsContent value="all" className="mt-0">
-              {directoryData ? (
-                <Card>
-                  <CardContent className="p-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      <Folder className="h-4 w-4 text-primary" /> 
+                      File Browser
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={toggleBatchMode}
+                      className="h-7 text-xs"
+                    >
+                      {isBatchMode ? "Exit Batch Mode" : "Enter Batch Mode"}
+                    </Button>
+                  </div>
+                  
+                  {directoryData ? (
                     <DirectoryTree 
                       data={directoryData} 
                       onSelect={handleFileSelect}
@@ -775,416 +656,201 @@ export function FileManager() {
                       onMultiSelectChange={setSelectedDirectories}
                       isProcessingBatch={batchScanMutation.isPending}
                     />
-                  </CardContent>
-                </Card>
-              ) : !isLoading && !error && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No directory data available
-                </div>
-              )}
+                  ) : !isLoading && !error && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No directory data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
-
+            
             <TabsContent value="high-quality" className="mt-0">
               <Card>
                 <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <Award className="h-5 w-5 text-green-500" />
-                        <h3 className="font-medium">High Quality Files</h3>
-                      </div>
-                      <Button 
-                        size="sm"
-                        className="flex items-center gap-1"
-                        onClick={() => handleBatchOrganize('high-quality')}
-                        disabled={!directoryData || batchOrganizeMutation.isPending}
-                      >
-                        <MoveRight className="h-4 w-4" />
-                        {batchOrganizeMutation.isPending ? 'Processing...' : 'Batch Organize'}
-                      </Button>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      <Award className="h-4 w-4 text-green-500" /> 
+                      High Quality Files
                     </div>
-                    {directoryData ? (
-                      <DirectoryTree 
-                        data={{
-                          ...directoryData,
-                          children: filterHighQualityFiles(directoryData)
-                        }} 
-                        onSelect={handleFileSelect}
-                        currentPath={currentPath}
-                        selectedFile={selectedFile}
-                        multiSelect={isBatchMode}
-                        selectedDirs={selectedDirectories}
-                        onMultiSelectChange={setSelectedDirectories}
-                        isProcessingBatch={batchScanMutation.isPending}
-                      />
-                    ) : (
-                      <div className="text-center py-4 text-muted-foreground">
-                        No high quality files found
-                      </div>
-                    )}
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => handleBatchOrganize('high-quality')}
+                      disabled={!directoryData}
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Process All
+                    </Button>
                   </div>
+                  
+                  {directoryData && filterHighQualityFiles(directoryData).length > 0 ? (
+                    <DirectoryTree 
+                      data={{ ...directoryData, children: filterHighQualityFiles(directoryData) }} 
+                      onSelect={handleFileSelect}
+                      currentPath={currentPath}
+                      selectedFile={selectedFile}
+                    />
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No high quality files found
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
-
+            
             <TabsContent value="monetizable" className="mt-0">
               <Card>
                 <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-amber-500" />
-                        <h3 className="font-medium">Monetization-Eligible Files</h3>
-                      </div>
-                      <Button 
-                        size="sm"
-                        className="flex items-center gap-1"
-                        onClick={() => handleBatchOrganize('monetizable')}
-                        disabled={!directoryData || batchOrganizeMutation.isPending}
-                      >
-                        <MoveRight className="h-4 w-4" />
-                        {batchOrganizeMutation.isPending ? 'Processing...' : 'Batch Organize'}
-                      </Button>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-amber-500" /> 
+                      Monetizable Files
                     </div>
-                    {directoryData ? (
-                      <DirectoryTree 
-                        data={{
-                          ...directoryData,
-                          children: filterMonetizableFiles(directoryData)
-                        }} 
-                        onSelect={handleFileSelect}
-                        currentPath={currentPath}
-                        selectedFile={selectedFile}
-                        multiSelect={isBatchMode}
-                        selectedDirs={selectedDirectories}
-                        onMultiSelectChange={setSelectedDirectories}
-                        isProcessingBatch={batchScanMutation.isPending}
-                      />
-                    ) : (
-                      <div className="text-center py-4 text-muted-foreground">
-                        No monetizable files found
-                      </div>
-                    )}
+                    <Button 
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => handleBatchOrganize('monetizable')}
+                      disabled={!directoryData}
+                    >
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Process All
+                    </Button>
                   </div>
+                  
+                  {directoryData && filterMonetizableFiles(directoryData).length > 0 ? (
+                    <DirectoryTree 
+                      data={{ ...directoryData, children: filterMonetizableFiles(directoryData) }} 
+                      onSelect={handleFileSelect}
+                      currentPath={currentPath}
+                      selectedFile={selectedFile}
+                    />
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No monetizable files found
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
-
-            <TabsContent value="deletion" className="mt-0">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-destructive" />
-                        <h3 className="font-medium">Files Marked for Deletion</h3>
-                      </div>
-                      <Button 
-                        size="sm"
-                        variant="destructive"
-                        className="flex items-center gap-1"
-                        onClick={() => handleBatchOrganize('deletion')}
-                        disabled={!directoryData || batchOrganizeMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        {batchOrganizeMutation.isPending ? 'Processing...' : 'Batch Process'}
-                      </Button>
-                    </div>
-                    {directoryData ? (
-                      <DirectoryTree 
-                        data={{
-                          ...directoryData,
-                          children: filterDeletionFiles(directoryData)
-                        }} 
-                        onSelect={handleFileSelect}
-                        currentPath={currentPath}
-                        selectedFile={selectedFile}
-                        multiSelect={isBatchMode}
-                        selectedDirs={selectedDirectories}
-                        onMultiSelectChange={setSelectedDirectories}
-                        isProcessingBatch={batchScanMutation.isPending}
-                      />
-                    ) : (
-                      <div className="text-center py-4 text-muted-foreground">
-                        No files marked for deletion
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
+            
             <TabsContent value="tag-search" className="mt-0">
               <Card>
                 <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <Tag className="h-5 w-5 text-blue-500" />
-                        <h3 className="font-medium">Tag-Based File Search</h3>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button 
-                          size="sm"
-                          variant="outline"
-                          className="flex items-center gap-1"
-                          onClick={() => refetch()}
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                          Refresh
-                        </Button>
-                      </div>
-                    </div>
-                    <TagSearch />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="rot-analysis" className="mt-0">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <FileWarning className="h-5 w-5 text-yellow-500" />
-                        <h3 className="font-medium">ROT Analysis</h3>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button 
-                          size="sm"
-                          variant="outline"
-                          className="flex items-center gap-1"
-                          onClick={() => refetch()}
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                          Refresh
-                        </Button>
-                      </div>
-                    </div>
-                    {/* Placeholder for ROT analysis visualization */}
-                    <p>ROT analysis visualization will be implemented here.</p>
-                  </div>
+                  <TagSearch />
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
-
-          {/* Daily Activity & Logs */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Daily Activity & Logs
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Tabs defaultValue="daily-report">
-                <TabsList className="w-full rounded-none px-6">
-                  <TabsTrigger value="daily-report">Daily Report</TabsTrigger>
-                  <TabsTrigger value="logs">System Logs</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="daily-report" className="p-6">
-                  {dailyReport ? (
-                    <div className="space-y-4">
-                      <div>
-                        <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
-                          <FileText className="h-4 w-4" />
-                          Files Processed Today ({dailyReport.filesProcessed.length})
-                        </h3>
-                        {dailyReport.filesProcessed.length > 0 ? (
-                          <div className="bg-muted/40 rounded-md p-3 max-h-40 overflow-y-auto">
-                            <div className="space-y-2">
-                              {dailyReport.filesProcessed.map((file, index) => (
-                                <div key={index} className="flex justify-between text-sm">
-                                  <span className="truncate max-w-[70%]">{file.path.split('/').pop()}</span>
-                                  <Badge variant={file.quality === 'Good' ? 'default' : 'outline'}>
-                                    {file.quality}
-                                  </Badge>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No files processed today</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-destructive" />
-                          Deletion Candidates ({dailyReport.deletions.length})
-                        </h3>
-                        {dailyReport.deletions.length > 0 ? (
-                          <div className="bg-destructive/5 rounded-md p-3 max-h-40 overflow-y-auto">
-                            <div className="space-y-2">
-                              {dailyReport.deletions.map((file, index) => (
-                                <div key={index} className="flex justify-between text-sm">
-                                  <span className="truncate max-w-[70%]">{file.path.split('/').pop()}</span>
-                                  <span className="text-xs text-muted-foreground">{file.reason}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No files marked for deletion today</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
-                          <MoveRight className="h-4 w-4" />
-                          Organization Changes ({dailyReport.organizationChanges.length})
-                        </h3>
-                        {dailyReport.organizationChanges.length > 0 ? (
-                          <div className="bg-muted/40 rounded-md p-3 max-h-40 overflow-y-auto">
-                            <div className="space-y-2">
-                              {dailyReport.organizationChanges.map((change, index) => (
-                                <div key={index} className="flex justify-between text-sm">
-                                  <span className="truncate max-w-[70%]">{change.path.split('/').pop()}</span>
-                                  <Badge variant="outline">
-                                    {change.action.replace('_', ' ')}
-                                  </Badge>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No organization changes today</p>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p>No daily report available</p>
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="logs" className="p-6">
-                  <LogViewer />
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </Card>
+          
+          {/* File uploader component (hidden input) */}
+          <FileUploader 
+            currentDirectory={currentPath}
+            onUploadComplete={handleUploadComplete}
+          />
         </div>
-
-        {/* Right Panel: File Assessment, Tags, & External Services */}
-        <div className="space-y-4">
-          <FileAssessment filePath={selectedFile} />
-
-          {selectedFile && (
-            <>
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center">
-                    <Tag className="h-4 w-4 mr-2" />
-                    File Tags
-                  </CardTitle>
-                  <CardDescription>
-                    Organize files with emoji-based tags
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <FileTags 
-                    fileId={selectedFile} 
-                    showAddButton={true}
-                    onTagsChanged={() => refetch()}
-                  />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg flex items-center">
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Organization Templates
-                  </CardTitle>
-                  <CardDescription>
-                    Apply consistent tag collections using templates
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <TagPresetManager 
-                    fileId={selectedFile}
-                    filePath={selectedFile}
-                    onTagsChanged={() => refetch()}
-                  />
-                </CardContent>
-              </Card>
-            </>
-          )}
-
+        
+        {/* Right panel: File details, stats and tags (4 cols) */}
+        <div className="lg:col-span-4 space-y-4">
+          {/* File Statistics Card */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg flex items-center">
-                <Boxes className="h-4 w-4 mr-2" />
-                Batch Organization
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <BarChart4 className="h-4 w-4 text-primary" />
+                File Statistics
               </CardTitle>
-              <CardDescription>
-                Apply templates to multiple files at once
-              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <BatchTagOrganizer 
-                  filePaths={directoryData?.children
-                    ?.filter(item => item.type === 'file')
-                    ?.map(item => item.path) || []}
-                  onComplete={() => refetch()}
-                />
+            <CardContent className="pb-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-muted/30 rounded-md p-2 text-center">
+                  <div className="text-xs text-muted-foreground">Total Files</div>
+                  <div className="text-xl font-bold">{stats.total}</div>
+                </div>
+                <div className="bg-muted/30 rounded-md p-2 text-center">
+                  <div className="text-xs text-muted-foreground">High Quality</div>
+                  <div className="text-xl font-bold text-green-500">{stats.highQuality}</div>
+                </div>
+                <div className="bg-muted/30 rounded-md p-2 text-center">
+                  <div className="text-xs text-muted-foreground">Monetizable</div>
+                  <div className="text-xl font-bold text-amber-500">{stats.monetizable}</div>
+                </div>
+                <div className="bg-muted/30 rounded-md p-2 text-center">
+                  <div className="text-xs text-muted-foreground">For Deletion</div>
+                  <div className="text-xl font-bold text-destructive">{stats.forDeletion}</div>
+                </div>
               </div>
             </CardContent>
           </Card>
-
-          <ExternalServices 
-            onNavigate={(path) => setCurrentPath(path)}
-            onImport={() => {}} // Not implementing import functionality yet
-            onConnect={(service, token) => {
-              toast({
-                title: `${service} Connected`,
-                description: `Successfully connected to ${service}`,
-              });
-            }}
-          />
+          
+          {/* Selected File Preview/Details */}
+          {selectedFile && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-primary" />
+                  Selected File
+                </CardTitle>
+                <CardDescription className="truncate text-xs">
+                  {selectedFile}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between gap-2">
+                    <Button size="sm" variant="outline" className="w-full" onClick={handleAnalyzeFile}>
+                      <FileText className="h-3.5 w-3.5 mr-1" />
+                      Analyze
+                    </Button>
+                    <Button size="sm" variant="outline" className="w-full" onClick={handleOrganizeFile}>
+                      <MoveRight className="h-3.5 w-3.5 mr-1" />
+                      Organize
+                    </Button>
+                  </div>
+                  
+                  {/* File Preview Component */}
+                  <div className="border rounded-md h-[350px] overflow-hidden">
+                    {/* Add File Preview component here with the selectedFile */}
+                    <div className="p-4 flex items-center justify-center h-full text-muted-foreground text-sm">
+                      File preview will be displayed here
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Tag Management Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Tag className="h-4 w-4 text-primary" />
+                Tags & Organization
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <Button size="sm" className="w-full" variant="outline">
+                  <Tag className="h-3.5 w-3.5 mr-1" />
+                  Manage Tags
+                </Button>
+                
+                <Button size="sm" className="w-full" variant="outline">
+                  <Sparkles className="h-3.5 w-3.5 mr-1" />
+                  Get AI Tag Suggestions
+                </Button>
+                
+                <Button size="sm" className="w-full" variant="outline">
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                  Batch Process Tags
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
   );
-}
-
-// Helper function to filter high quality files
-function filterHighQualityFiles(entry: DirectoryEntry): DirectoryEntry[] {
-  if (!entry.children) return [];
-
-  return entry.children.filter(child => {
-    if (child.type === 'file') {
-      return child.assessment && child.assessment.qualityScore === 'Good';
-    }
-    return false;
-  });
-}
-
-// Helper function to filter monetizable files
-function filterMonetizableFiles(entry: DirectoryEntry): DirectoryEntry[] {
-  if (!entry.children) return [];
-
-  return entry.children.filter(child => {
-    if (child.type === 'file') {
-      return child.assessment && child.assessment.monetizationEligible;
-    }
-    return false;
-  });
-}
-
-// Helper function to filter files marked for deletion
-function filterDeletionFiles(entry: DirectoryEntry): DirectoryEntry[] {
-  if (!entry.children) return [];
-
-  return entry.children.filter(child => {
-    if (child.type === 'file') {
-      return child.assessment && child.assessment.needsDeletion;
-    }
-    return false;
-  });
 }
