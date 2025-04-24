@@ -101,13 +101,7 @@ export function FileManager() {
         description: "Directory scan completed",
       });
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: String(error),
-        variant: "destructive",
-      });
-    },
+    onError: handleMutationError,
   });
 
   // Mutation for creating a new folder
@@ -123,13 +117,7 @@ export function FileManager() {
       });
       refetch();
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: String(error),
-        variant: "destructive",
-      });
-    },
+    onError: handleMutationError,
   });
 
   // Mutation for organizing files
@@ -144,13 +132,7 @@ export function FileManager() {
       });
       refetch();
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: String(error),
-        variant: "destructive",
-      });
-    },
+    onError: handleMutationError,
   });
 
   // Mutation for batch organizing files
@@ -165,13 +147,7 @@ export function FileManager() {
       });
       refetch();
     },
-    onError: (error) => {
-      toast({
-        title: "Batch Organization Error",
-        description: String(error),
-        variant: "destructive",
-      });
-    },
+    onError: handleMutationError,
   });
 
   // Mutation for batch scanning directories
@@ -192,13 +168,7 @@ export function FileManager() {
       // Refresh the current view
       refetch();
     },
-    onError: (error) => {
-      toast({
-        title: "Batch Scan Error",
-        description: String(error),
-        variant: "destructive",
-      });
-    },
+    onError: handleMutationError,
   });
 
   // Mutation for analyzing a file
@@ -213,13 +183,7 @@ export function FileManager() {
       });
       refetch();
     },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: String(error),
-        variant: "destructive",
-      });
-    },
+    onError: handleMutationError,
   });
 
   // Handle file selection
@@ -506,6 +470,14 @@ export function FileManager() {
 
   // Get file statistics
   const stats = getFileStats();
+
+  const handleMutationError = (error: any) => {
+    toast({
+      title: "Error",
+      description: String(error),
+      variant: "destructive",
+    });
+  };
 
   return (
     <div className="space-y-6">
