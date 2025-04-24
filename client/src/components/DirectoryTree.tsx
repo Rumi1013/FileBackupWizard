@@ -183,10 +183,22 @@ export function DirectoryTree({
     return <File className="h-4 w-4 text-gray-500" />;
   };
 
+  const filterEntries = (entries: DirectoryEntry[]) => {
+    if (!entries) return [];
+    const seen = new Set<string>();
+    return entries.filter(entry => {
+      if (seen.has(entry.path)) {
+        return false;
+      }
+      seen.add(entry.path);
+      return true;
+    });
+  };
+
   const renderNode = (node: DirectoryEntry, level: number = 0) => {
     const isExpanded = expanded.has(node.path);
     const hasChildren = node.children && node.children.length > 0;
-    const children = node.children || [];
+    const children = filterEntries(node.children || []); // Apply filter here
     const isSelected = selectedDirs.has(node.path);
     const isFocused = focusedNode === node.path;
 
