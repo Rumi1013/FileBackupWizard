@@ -56,7 +56,8 @@ export function FileManager() {
   const [organizationView, setOrganizationView] = useState<'all' | 'high-quality' | 'monetizable' | 'delete-candidates'>('all');
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [selectedDirectories, setSelectedDirectories] = useState<Set<string>>(new Set());
-  const [storageProvider, setStorageProvider] = useState<'local' | 'dropbox' | 'google-drive' | 'github' | 'cloudflare' | 'mm-storage' | 'custom'>('local');
+  const [storageProvider, setStorageProvider] = useState<'local' | 'dropbox' | 'google-drive' | 'github' | 'cloudflare' | 'mm-storage' | 
+    'home-dir' | 'downloads-dir' | 'documents-dir' | 'pictures-dir' | 'workspace-dir' | 'custom'>('local');
   const { toast } = useToast();
   
   // Common error handler for mutations
@@ -216,7 +217,8 @@ export function FileManager() {
   };
 
   // Handle storage selection
-  const handleStorageSelect = (path: string, provider: 'local' | 'dropbox' | 'google-drive' | 'github' | 'cloudflare' | 'mm-storage' | 'custom') => {
+  const handleStorageSelect = (path: string, provider: 'local' | 'dropbox' | 'google-drive' | 'github' | 'cloudflare' | 'mm-storage' | 
+    'home-dir' | 'downloads-dir' | 'documents-dir' | 'pictures-dir' | 'workspace-dir' | 'custom') => {
     setCurrentPath(path);
     setStorageProvider(provider);
 

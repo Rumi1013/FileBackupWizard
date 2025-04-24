@@ -26,7 +26,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Skeleton } from './ui/skeleton';
 import { ScrollArea } from './ui/scroll-area';
 
-type StorageProviderType = 'local' | 'dropbox' | 'google-drive' | 'github' | 'cloudflare' | 'mm-storage' | 'custom';
+type StorageProviderType = 'local' | 'dropbox' | 'google-drive' | 'github' | 'cloudflare' | 'mm-storage' | 
+  'home-dir' | 'downloads-dir' | 'documents-dir' | 'pictures-dir' | 'workspace-dir' | 'custom';
 
 interface StorageProvider {
   id: StorageProviderType;
@@ -110,7 +111,7 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
       connected: true
     },
     {
-      id: 'local',
+      id: 'home-dir',
       name: 'Home Directory',
       icon: <Home className="h-5 w-5" />,
       basePath: '~',
@@ -118,7 +119,7 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
       connected: true
     },
     {
-      id: 'local',
+      id: 'downloads-dir',
       name: 'Downloads',
       icon: <FolderOpen className="h-5 w-5" />,
       basePath: '~/Downloads',
@@ -126,7 +127,7 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
       connected: true
     },
     {
-      id: 'local',
+      id: 'documents-dir',
       name: 'Documents',
       icon: <FileIcon className="h-5 w-5" />,
       basePath: '~/Documents',
@@ -134,7 +135,7 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
       connected: true
     },
     {
-      id: 'local',
+      id: 'pictures-dir',
       name: 'Pictures',
       icon: <FolderOpen className="h-5 w-5" />,
       basePath: '~/Pictures',
@@ -142,7 +143,7 @@ export default function StorageSelector({ onStorageSelect, currentPath }: Storag
       connected: true
     },
     {
-      id: 'local',
+      id: 'workspace-dir',
       name: 'Workspace',
       icon: <FolderOpen className="h-5 w-5" />,
       basePath: '/workspace',
