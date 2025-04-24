@@ -43,7 +43,8 @@ import {
   DownloadCloud,
   ExternalLink,
   Tag,
-  Boxes
+  Boxes,
+  FileWarning
 } from "lucide-react";
 import type { DirectoryEntry, DailyReport, FileAssessment as FileAssessmentType } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -151,7 +152,7 @@ export function FileManager() {
       });
     },
   });
-  
+
   // Mutation for batch organizing files
   const batchOrganizeMutation = useMutation({
     mutationFn: async (filePaths: string[]) => {
@@ -172,7 +173,7 @@ export function FileManager() {
       });
     },
   });
-  
+
   // Mutation for batch scanning directories
   const batchScanMutation = useMutation({
     mutationFn: async (dirPaths: string[]) => {
@@ -183,11 +184,11 @@ export function FileManager() {
         title: "Batch Scan Complete",
         description: `Scanned ${data.scannedCount} directories successfully`,
       });
-      
+
       // Reset selected directories after scan
       setSelectedDirectories(new Set());
       setIsBatchMode(false);
-      
+
       // Refresh the current view
       refetch();
     },
@@ -240,15 +241,15 @@ export function FileManager() {
   const goToRoot = () => {
     setCurrentPath("/");
   };
-  
+
   // Handle storage selection
   const handleStorageSelect = (path: string, provider: 'local' | 'dropbox' | 'google-drive' | 'github' | 'cloudflare' | 'mm-storage' | 'custom') => {
     setCurrentPath(path);
     setStorageProvider(provider);
-    
+
     // You could add additional logic here based on the storage provider
     // For example, setting up authentication or showing provider-specific options
-    
+
     if (provider !== 'local' && provider !== 'mm-storage') {
       let serviceName = "";
       switch(provider) {
@@ -267,7 +268,7 @@ export function FileManager() {
         default:
           serviceName = "Service";
       }
-      
+
       toast({
         title: "External Storage",
         description: `${serviceName} connection will be available in the next update.`,
@@ -297,7 +298,7 @@ export function FileManager() {
       analyzeMutation.mutate(selectedFile);
     }
   };
-  
+
   // Toggle batch mode for multi-directory selection
   const toggleBatchMode = () => {
     setIsBatchMode(!isBatchMode);
@@ -306,7 +307,7 @@ export function FileManager() {
       setSelectedDirectories(new Set());
     }
   };
-  
+
   // Handle batch directory scanning
   const handleBatchScan = () => {
     if (selectedDirectories.size === 0) {
@@ -317,7 +318,7 @@ export function FileManager() {
       });
       return;
     }
-    
+
     const dirPaths = Array.from(selectedDirectories);
     if (confirm(`Scan ${dirPaths.length} selected ${dirPaths.length === 1 ? 'directory' : 'directories'}?`)) {
       batchScanMutation.mutate(dirPaths);
@@ -330,12 +331,12 @@ export function FileManager() {
   // Function to get file statistics
   const getFileStats = () => {
     if (!directoryData) return { total: 0, highQuality: 0, monetizable: 0, forDeletion: 0 };
-    
+
     let total = 0;
     let highQuality = 0;
     let monetizable = 0;
     let forDeletion = 0;
-    
+
     const countFiles = (entry: DirectoryEntry) => {
       if (entry.type === 'file') {
         total++;
@@ -349,11 +350,11 @@ export function FileManager() {
         entry.children.forEach(countFiles);
       }
     };
-    
+
     countFiles(directoryData);
     return { total, highQuality, monetizable, forDeletion };
   };
-  
+
   // Filter functions for different views
   const filterHighQualityFiles = (entry: DirectoryEntry): DirectoryEntry[] => {
     if (entry.type === 'file') {
@@ -362,11 +363,11 @@ export function FileManager() {
       }
       return [];
     }
-    
+
     if (!entry.children) return [];
-    
+
     const filteredChildren: DirectoryEntry[] = [];
-    
+
     for (const child of entry.children) {
       if (child.type === 'file') {
         if (child.assessment?.qualityScore === 'Good') {
@@ -382,10 +383,10 @@ export function FileManager() {
         }
       }
     }
-    
+
     return filteredChildren;
   };
-  
+
   const filterMonetizableFiles = (entry: DirectoryEntry): DirectoryEntry[] => {
     if (entry.type === 'file') {
       if (entry.assessment?.monetizationEligible) {
@@ -393,11 +394,11 @@ export function FileManager() {
       }
       return [];
     }
-    
+
     if (!entry.children) return [];
-    
+
     const filteredChildren: DirectoryEntry[] = [];
-    
+
     for (const child of entry.children) {
       if (child.type === 'file') {
         if (child.assessment?.monetizationEligible) {
@@ -413,10 +414,10 @@ export function FileManager() {
         }
       }
     }
-    
+
     return filteredChildren;
   };
-  
+
   const filterDeletionCandidates = (entry: DirectoryEntry): DirectoryEntry[] => {
     if (entry.type === 'file') {
       if (entry.assessment?.needsDeletion) {
@@ -424,11 +425,11 @@ export function FileManager() {
       }
       return [];
     }
-    
+
     if (!entry.children) return [];
-    
+
     const filteredChildren: DirectoryEntry[] = [];
-    
+
     for (const child of entry.children) {
       if (child.type === 'file') {
         if (child.assessment?.needsDeletion) {
@@ -444,17 +445,17 @@ export function FileManager() {
         }
       }
     }
-    
+
     return filteredChildren;
   };
-  
+
   // Handle batch organization of all files in a particular category
   const handleBatchOrganize = (category: 'high-quality' | 'monetizable' | 'deletion') => {
     if (!directoryData) return;
-    
+
     // Determine which filter to use based on category
     let filterFunction: (entry: DirectoryEntry) => DirectoryEntry[];
-    
+
     switch (category) {
       case 'high-quality':
         filterFunction = filterHighQualityFiles;
@@ -468,14 +469,14 @@ export function FileManager() {
       default:
         return;
     }
-    
+
     // Get filtered files
     const filteredFiles = filterFunction(directoryData);
-    
+
     // Flatten the structure to get all file paths
     const getAllFilePaths = (entries: DirectoryEntry[]): string[] => {
       const paths: string[] = [];
-      
+
       for (const entry of entries) {
         if (entry.type === 'file') {
           paths.push(entry.path);
@@ -483,12 +484,12 @@ export function FileManager() {
           paths.push(...getAllFilePaths(entry.children));
         }
       }
-      
+
       return paths;
     };
-    
+
     const filePaths = getAllFilePaths(filteredFiles);
-    
+
     if (filePaths.length === 0) {
       toast({
         title: "No Files Found",
@@ -496,7 +497,7 @@ export function FileManager() {
       });
       return;
     }
-    
+
     // Confirm with user
     if (confirm(`Apply organization rules to ${filePaths.length} ${category.replace('-', ' ')} files?`)) {
       batchOrganizeMutation.mutate(filePaths);
@@ -539,7 +540,7 @@ export function FileManager() {
               onStorageSelect={handleStorageSelect}
               currentPath={currentPath}
             />
-              
+
             {/* Path Input and Actions */}
             <div className="flex flex-col gap-2">
               <div className="flex gap-2">
@@ -565,7 +566,7 @@ export function FileManager() {
                   Scan
                 </Button>
               </div>
-              
+
               {/* Batch Mode Controls */}
               <div className="flex items-center justify-between gap-2 px-1">
                 <div className="flex items-center gap-2">
@@ -588,14 +589,14 @@ export function FileManager() {
                       </>
                     )}
                   </Button>
-                  
+
                   {isBatchMode && (
                     <span className="text-xs text-muted-foreground">
                       {selectedDirectories.size} {selectedDirectories.size === 1 ? 'directory' : 'directories'} selected
                     </span>
                   )}
                 </div>
-                
+
                 {isBatchMode && (
                   <Button
                     variant="default"
@@ -645,7 +646,7 @@ export function FileManager() {
                   </div>
                   <p className="text-2xl font-bold mt-2">{stats.total}</p>
                 </div>
-                
+
                 <div className="bg-background rounded-lg p-4 shadow-sm">
                   <div className="flex justify-between items-start">
                     <h3 className="text-sm font-medium">High Quality</h3>
@@ -653,7 +654,7 @@ export function FileManager() {
                   </div>
                   <p className="text-2xl font-bold mt-2">{stats.highQuality}</p>
                 </div>
-                
+
                 <div className="bg-background rounded-lg p-4 shadow-sm">
                   <div className="flex justify-between items-start">
                     <h3 className="text-sm font-medium">Monetizable</h3>
@@ -661,7 +662,7 @@ export function FileManager() {
                   </div>
                   <p className="text-2xl font-bold mt-2">{stats.monetizable}</p>
                 </div>
-                
+
                 <div className="bg-background rounded-lg p-4 shadow-sm">
                   <div className="flex justify-between items-start">
                     <h3 className="text-sm font-medium">For Deletion</h3>
@@ -691,7 +692,7 @@ export function FileManager() {
                   <Upload className="h-8 w-8 mb-2 text-primary" />
                   <span className="text-xs font-medium">Upload File</span>
                 </Button>
-                
+
                 <Button 
                   variant="outline" 
                   className="flex flex-col items-center p-4 h-auto hover:bg-primary/5 hover:border-primary transition-colors"
@@ -700,7 +701,7 @@ export function FileManager() {
                   <FolderPlus className="h-8 w-8 mb-2 text-primary" />
                   <span className="text-xs font-medium">New Folder</span>
                 </Button>
-                
+
                 <Button 
                   variant="outline" 
                   className="flex flex-col items-center p-4 h-auto hover:bg-primary/5 hover:border-primary transition-colors"
@@ -710,7 +711,7 @@ export function FileManager() {
                   <FileText className="h-8 w-8 mb-2 text-primary" />
                   <span className="text-xs font-medium">Analyze File</span>
                 </Button>
-                
+
                 <Button 
                   variant="outline" 
                   className="flex flex-col items-center p-4 h-auto hover:bg-primary/5 hover:border-primary transition-colors"
@@ -720,7 +721,7 @@ export function FileManager() {
                   <MoveRight className="h-8 w-8 mb-2 text-primary" />
                   <span className="text-xs font-medium">Organize</span>
                 </Button>
-                
+
                 <Button 
                   variant="outline" 
                   className="flex flex-col items-center p-4 h-auto hover:bg-primary/5 hover:border-primary transition-colors"
@@ -728,7 +729,7 @@ export function FileManager() {
                   <ClipboardList className="h-8 w-8 mb-2 text-primary" />
                   <span className="text-xs font-medium">Daily Report</span>
                 </Button>
-                
+
                 <Button 
                   variant="outline" 
                   className="flex flex-col items-center p-4 h-auto text-destructive hover:bg-destructive/5 hover:border-destructive transition-colors" 
@@ -760,7 +761,7 @@ export function FileManager() {
           {/* File View Tabs */}
           <Tabs defaultValue="all">
             <div className="flex justify-between items-center mb-2">
-              <TabsList className="grid grid-cols-5 w-full">
+              <TabsList className="grid grid-cols-6 w-full">
                 <TabsTrigger value="all" onClick={() => setOrganizationView('all')}>
                   <Folder className="mr-2 h-4 w-4" />
                   All Files
@@ -780,6 +781,10 @@ export function FileManager() {
                 <TabsTrigger value="tag-search">
                   <Tag className="mr-2 h-4 w-4" />
                   Tag Search
+                </TabsTrigger>
+                <TabsTrigger value="rot-analysis">
+                  <FileWarning className="mr-2 h-4 w-4" />
+                  ROT Analysis
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -936,7 +941,7 @@ export function FileManager() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             <TabsContent value="tag-search" className="mt-0">
               <Card>
                 <CardContent className="p-4">
@@ -963,6 +968,33 @@ export function FileManager() {
                 </CardContent>
               </Card>
             </TabsContent>
+            <TabsContent value="rot-analysis" className="mt-0">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <FileWarning className="h-5 w-5 text-yellow-500" />
+                        <h3 className="font-medium">ROT Analysis</h3>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button 
+                          size="sm"
+                          variant="outline"
+                          className="flex items-center gap-1"
+                          onClick={() => refetch()}
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          Refresh
+                        </Button>
+                      </div>
+                    </div>
+                    {/* Placeholder for ROT analysis visualization */}
+                    <p>ROT analysis visualization will be implemented here.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
 
           {/* Daily Activity & Logs */}
@@ -979,7 +1011,7 @@ export function FileManager() {
                   <TabsTrigger value="daily-report">Daily Report</TabsTrigger>
                   <TabsTrigger value="logs">System Logs</TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="daily-report" className="p-6">
                   {dailyReport ? (
                     <div className="space-y-4">
@@ -1005,7 +1037,7 @@ export function FileManager() {
                           <p className="text-sm text-muted-foreground">No files processed today</p>
                         )}
                       </div>
-                      
+
                       <div>
                         <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
                           <AlertTriangle className="h-4 w-4 text-destructive" />
@@ -1026,7 +1058,7 @@ export function FileManager() {
                           <p className="text-sm text-muted-foreground">No files marked for deletion today</p>
                         )}
                       </div>
-                      
+
                       <div>
                         <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
                           <MoveRight className="h-4 w-4" />
@@ -1056,7 +1088,7 @@ export function FileManager() {
                     </div>
                   )}
                 </TabsContent>
-                
+
                 <TabsContent value="logs" className="p-6">
                   <LogViewer />
                 </TabsContent>
@@ -1068,7 +1100,7 @@ export function FileManager() {
         {/* Right Panel: File Assessment, Tags, & External Services */}
         <div className="space-y-4">
           <FileAssessment filePath={selectedFile} />
-          
+
           {selectedFile && (
             <>
               <Card>
@@ -1089,7 +1121,7 @@ export function FileManager() {
                   />
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center">
@@ -1110,7 +1142,7 @@ export function FileManager() {
               </Card>
             </>
           )}
-          
+
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center">
@@ -1132,7 +1164,7 @@ export function FileManager() {
               </div>
             </CardContent>
           </Card>
-          
+
           <ExternalServices 
             onNavigate={(path) => setCurrentPath(path)}
             onImport={() => {}} // Not implementing import functionality yet
@@ -1152,7 +1184,7 @@ export function FileManager() {
 // Helper function to filter high quality files
 function filterHighQualityFiles(entry: DirectoryEntry): DirectoryEntry[] {
   if (!entry.children) return [];
-  
+
   return entry.children.filter(child => {
     if (child.type === 'file') {
       return child.assessment && child.assessment.qualityScore === 'Good';
@@ -1164,7 +1196,7 @@ function filterHighQualityFiles(entry: DirectoryEntry): DirectoryEntry[] {
 // Helper function to filter monetizable files
 function filterMonetizableFiles(entry: DirectoryEntry): DirectoryEntry[] {
   if (!entry.children) return [];
-  
+
   return entry.children.filter(child => {
     if (child.type === 'file') {
       return child.assessment && child.assessment.monetizationEligible;
@@ -1176,7 +1208,7 @@ function filterMonetizableFiles(entry: DirectoryEntry): DirectoryEntry[] {
 // Helper function to filter files marked for deletion
 function filterDeletionFiles(entry: DirectoryEntry): DirectoryEntry[] {
   if (!entry.children) return [];
-  
+
   return entry.children.filter(child => {
     if (child.type === 'file') {
       return child.assessment && child.assessment.needsDeletion;
