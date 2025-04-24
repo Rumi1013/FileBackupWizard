@@ -17,6 +17,8 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink } from "@/components/ui/brea
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Folder, 
@@ -539,8 +541,66 @@ export function FileManager() {
             <div className="flex items-center gap-2">
               <Button 
                 variant="outline"
-                onClick={() => document.getElementById('file-upload-input')?.click()}
                 size="sm"
+                onClick={() => {
+                  // Create an input element
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  
+                  // Set up the change handler
+                  input.onchange = (e) => {
+                    const target = e.target as HTMLInputElement;
+                    if (target.files && target.files[0]) {
+                      const formData = new FormData();
+                      formData.append('file', target.files[0]);
+                      
+                      // Process the directory path
+                      let processedPath = currentPath;
+                      if (currentPath.includes('~/Downloads') || currentPath === 'downloads-dir') {
+                        processedPath = 'downloads';
+                      } else if (currentPath.includes('~/Documents') || currentPath === 'documents-dir') {
+                        processedPath = 'documents';
+                      } else if (currentPath.includes('~/Pictures') || currentPath === 'pictures-dir') {
+                        processedPath = 'pictures';
+                      } else if (currentPath === 'home-dir') {
+                        processedPath = '~';
+                      } else if (currentPath === 'workspace-dir') {
+                        processedPath = '/workspace';
+                      }
+                      
+                      formData.append('directory', processedPath);
+                      console.log('Uploading to directory:', processedPath);
+                      
+                      fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData,
+                      })
+                      .then(response => {
+                        if (!response.ok) {
+                          throw new Error('Upload failed');
+                        }
+                        return response.json();
+                      })
+                      .then(() => {
+                        toast({
+                          title: "Success",
+                          description: "File uploaded successfully",
+                        });
+                        refetch();
+                      })
+                      .catch(error => {
+                        toast({
+                          title: "Upload Failed",
+                          description: String(error),
+                          variant: "destructive",
+                        });
+                      });
+                    }
+                  };
+                  
+                  // Trigger the file selection dialog
+                  input.click();
+                }}
               >
                 <Upload className="h-4 w-4 mr-2" />
                 Upload

@@ -405,8 +405,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      const directory = req.body.directory || '';
-      console.log('Upload request:', { directory, filename: req.file.originalname });
+      let directory = req.body.directory || '';
+      console.log('Upload request:', { originalDirectory: directory, filename: req.file.originalname });
 
       if (!storage.isValidFileType(req.file.originalname)) {
         return res.status(400).json({ 
@@ -414,6 +414,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           supported_types: VALID_FILE_TYPES,
           message: 'Please upload one of the supported file types'
         });
+      }
+
+      // Handle special paths for upload destination
+      const specialPaths: Record<string, string> = {
+        '/': '/uploads/root',
+        '~': '/uploads/home',
+        'downloads': '/uploads/downloads',
+        'documents': '/uploads/documents',
+        'pictures': '/uploads/pictures',
+        '/workspace': '/uploads/workspace',
+      };
+
+      // Check if this is a special path and normalize it
+      if (specialPaths[directory]) {
+        directory = specialPaths[directory].replace('/uploads/', '');
+        console.log('Mapped special path to upload directory:', directory);
       }
 
       // Create directory if it doesn't exist yet

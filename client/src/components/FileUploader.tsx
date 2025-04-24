@@ -21,7 +21,26 @@ export function FileUploader({ onUploadComplete, currentDirectory }: FileUploade
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('directory', currentDirectory);
+      
+      // Process the directory path before sending
+      let processedPath = currentDirectory;
+      
+      // If the path contains special macOS directories, convert them for server handling
+      if (currentDirectory.includes('~/Downloads') || currentDirectory === 'downloads-dir') {
+        processedPath = 'downloads';
+      } else if (currentDirectory.includes('~/Documents') || currentDirectory === 'documents-dir') {
+        processedPath = 'documents';
+      } else if (currentDirectory.includes('~/Pictures') || currentDirectory === 'pictures-dir') {
+        processedPath = 'pictures';
+      } else if (currentDirectory === 'home-dir') {
+        processedPath = '~';
+      } else if (currentDirectory === 'workspace-dir') {
+        processedPath = '/workspace';
+      }
+      
+      formData.append('directory', processedPath);
+      
+      console.log('Uploading file to directory:', processedPath);
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -29,7 +48,8 @@ export function FileUploader({ onUploadComplete, currentDirectory }: FileUploade
       });
 
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
       }
 
       return response.json();
